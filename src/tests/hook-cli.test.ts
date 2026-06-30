@@ -128,6 +128,23 @@ describe("hook CLI piping", () => {
     assert.equal(status, 2);
   });
 
+  it("allows realistic git wrap-up via CLI when hard expired", () => {
+    armSession(stateDir, "cli-wrap", 60, "task", 100, true);
+    const { stdout, status } = runHook(
+      "pre-tool-use",
+      {
+        hook_event_name: "PreToolUse",
+        session_id: "cli-wrap",
+        toolName: "Bash",
+        toolInput: { command: 'git commit -m "fix; ok" --no-verify' },
+      },
+      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+    );
+    const parsed = JSON.parse(stdout.trim()) as { decision: string };
+    assert.equal(parsed.decision, "allow");
+    assert.equal(status, 0);
+  });
+
   it("allows pre-tool-use when time remains with exit code 0", () => {
     armSession(stateDir, "cli-allow", 600, "task", 100);
     const { stdout, status } = runHook(

@@ -13,6 +13,11 @@ describe("parseDurationSeconds", () => {
   it("returns null for invalid input", () => {
     assert.equal(parseDurationSeconds("not-a-duration"), null);
   });
+
+  it("parses duration from full /deadline-hard slash command", () => {
+    assert.equal(parseDurationSeconds("/deadline-hard 8m"), 480);
+    assert.equal(parseDurationSeconds("/deadline 5분"), 300);
+  });
 });
 
 describe("extractDeadlineArm", () => {

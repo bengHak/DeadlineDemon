@@ -1,5 +1,5 @@
 const DEADLINE_COMMAND =
-  /(?:^|\s)\/?deadline\s+(?:(\d+)\s*(?:분|分钟|min(?:ute)?s?|m)|(\d+)\s*(?:초|秒|sec(?:ond)?s?|s)|(\d+)\s*(?:시간|小时|hour?s?|h))\b/i;
+  /(?:^|\s)\/?deadline(?:-hard)?\s+(?:(\d+)\s*(?:분|分钟|min(?:ute)?s?|m)|(\d+)\s*(?:초|秒|sec(?:ond)?s?|s)|(\d+)\s*(?:시간|小时|hour?s?|h))(?=\s|$)/i;
 
 export function parseDurationSeconds(input: string): number | null {
   const trimmed = input.trim();

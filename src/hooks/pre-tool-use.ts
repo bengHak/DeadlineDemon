@@ -4,14 +4,7 @@ import { resolveNowSec } from "../core/clock.js";
 import { resolvePlatform } from "../formatters/platform.js";
 import { formatPreToolAllow, formatPreToolDeny } from "../formatters/output.js";
 
-const SAFE_GIT_PATH = "[A-Za-z0-9._/@:+,=-]+";
-const SAFE_GIT_COMMANDS = [
-  /^git status(?:\s+(?:--short|-s|--branch|-b|--porcelain(?:=[12])?))*$/,
-  new RegExp(`^git diff(?:\\s+(?:--cached|--staged|--stat|--name-only|--name-status|--check|--|${SAFE_GIT_PATH}))*$`),
-  new RegExp(`^git add\\s+${SAFE_GIT_PATH}(?:\\s+${SAFE_GIT_PATH})*$`),
-  new RegExp(`^git commit\\s+-m\\s+(?:"[^"\\r\\n;&|$<>` + "`" + `]*"|'[^'\\r\\n;&|$<>` + "`" + `]*'|${SAFE_GIT_PATH})$`),
-] as const;
-const SHELL_CONTROL_CHARS = /[;&|$<>`\r\n]/;
+const WRAP_UP_SUBCOMMANDS = new Set(["status", "diff", "add", "commit"]);
 
 function isWrapUpToolName(toolName: string): boolean {
   const normalized = toolName.toLowerCase();
@@ -38,7 +31,62 @@ function toolInputFromInput(input: Record<string, unknown>): Record<string, unkn
   return {};
 }
 
-function isWrapUpTool(toolName: string, toolInput: Record<string, unknown>): boolean {
+/** Detect shell chaining/substitution outside balanced quotes. */
+export function hasShellInjectionOutsideQuotes(command: string): boolean {
+  let inSingle = false;
+  let inDouble = false;
+
+  for (let i = 0; i < command.length; i++) {
+    const ch = command[i];
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (inSingle || inDouble) continue;
+
+    if (ch === "#") return false;
+    if (ch === "\r" || ch === "\n") return true;
+    if (ch === "&") return true;
+    if (ch === "|") return true;
+    if (ch === ";" || ch === "$" || ch === "`" || ch === "<" || ch === ">") return true;
+  }
+
+  return inSingle || inDouble;
+}
+
+function normalizeGitCommand(toolName: string, command: string): string {
+  const trimmed = command.trim().replace(/\s+/g, " ");
+  if (trimmed.length === 0) return "";
+  if (toolName.toLowerCase() === "git" && !/^git\s/i.test(trimmed)) {
+    return `git ${trimmed}`;
+  }
+  return trimmed;
+}
+
+/** Allow git status/diff/add/commit wrap-up commands with realistic paths and flags. */
+export function isSafeGitWrapUpCommand(command: string): boolean {
+  const normalized = command.trim().replace(/\s+/g, " ");
+  if (normalized.length === 0) return false;
+  if (hasShellInjectionOutsideQuotes(normalized)) return false;
+
+  const match = normalized.match(/^git\s+(\S+)(?:\s+([\s\S]*))?$/i);
+  if (!match) return false;
+
+  const subcommand = match[1].toLowerCase();
+  if (!WRAP_UP_SUBCOMMANDS.has(subcommand)) return false;
+
+  if (subcommand === "commit") {
+    return /\s-(?:m|--message)(?:\s|=)/i.test(normalized);
+  }
+
+  return true;
+}
+
+export function isWrapUpTool(toolName: string, toolInput: Record<string, unknown>): boolean {
   if (!isWrapUpToolName(toolName)) return false;
   const command =
     typeof toolInput["command"] === "string"
@@ -46,9 +94,8 @@ function isWrapUpTool(toolName: string, toolInput: Record<string, unknown>): boo
       : typeof toolInput["cmd"] === "string"
         ? toolInput["cmd"]
         : "";
-  const normalized = command.trim().replace(/\s+/g, " ");
-  if (normalized.length === 0 || SHELL_CONTROL_CHARS.test(normalized)) return false;
-  return SAFE_GIT_COMMANDS.some((pattern) => pattern.test(normalized));
+  const gitCommand = normalizeGitCommand(toolName, command);
+  return isSafeGitWrapUpCommand(gitCommand);
 }
 
 export function runPreToolUseHook(
