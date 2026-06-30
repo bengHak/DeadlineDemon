@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/banner.jpg" alt="DeadlineDemon — arm a deadline, nudge your agent to finish on time" width="720">
+</p>
+
 # DeadlineDemon
 
 Cross-CLI hook tool that arms session deadlines and nudges AI agents to finish on time.
