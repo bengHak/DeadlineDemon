@@ -1,12 +1,12 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="DeadlineDemon — arm a deadline, nudge your agent to finish on time" width="360">
+  <img src="assets/banner.jpg" alt="DeadlineDemon — set a deadline, nudge your agent to finish on time" width="360">
 </p>
 
 # DeadlineDemon
 
 [![npm version](https://img.shields.io/npm/v/deadline-demon.svg)](https://www.npmjs.com/package/deadline-demon)
 
-Cross-CLI hook tool that arms session deadlines and nudges AI agents to finish on time.
+Cross-CLI hook tool that sets session deadlines and nudges AI agents to finish on time.
 
 Works with **Codex CLI**, **Grok Build**, and **Claude Code**.
 
@@ -38,9 +38,9 @@ Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into
 
 Enable the plugin or hooks in your harness (`/plugins`, `/hooks` in Codex/Grok; trust project hooks if using repo-local copies).
 
-## Arm deadlines
+## Set deadlines
 
-One install provides both modes — pick per session when you arm:
+One install provides both modes — pick per session when you set one:
 
 | Mode | Behavior |
 |------|----------|
@@ -86,12 +86,12 @@ npx deadline-demon reset [--session-id <id>]
 ```
 
 - **uninstall** — remove `~/.deadline-demon/`, Grok/Codex plugin dirs, and the Claude hooks file created by `install`
-- **status** — show armed sessions, remaining time, and mode (`nudge` or `hard`)
-- **reset** — clear one session or all armed sessions
+- **status** — show active sessions, remaining time, and mode (`nudge` or `hard`)
+- **reset** — clear one session or all active sessions
 
 ## Grok note
 
-If Grok ignores `UserPromptSubmit` stdout, nudge text may not appear. Tool blocking applies only to sessions armed with `/deadline-hard` (the `PreToolUse` hook is installed but allows all tools for `/deadline` sessions).
+If Grok ignores `UserPromptSubmit` stdout, nudge text may not appear. Tool blocking applies only to sessions set with `/deadline-hard` (the `PreToolUse` hook is installed but allows all tools for `/deadline` sessions).
 
 ---
 
@@ -127,8 +127,8 @@ npm test
 
 Existing Claude timer hooks **report elapsed time**. DeadlineDemon **reminds the agent of a deadline**:
 
-- `/deadline N` arms a nudge-only session timer
-- `/deadline-hard N` arms the same timer with tool-call enforcement after time-up
+- `/deadline N` sets a nudge-only session timer
+- `/deadline-hard N` sets the same timer with tool-call enforcement after time-up
 - Every prompt injects remaining time with escalating urgency
 
 ## License
