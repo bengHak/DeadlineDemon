@@ -38,24 +38,43 @@ Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into
 
 Enable the plugin or hooks in your harness (`/plugins`, `/hooks` in Codex/Grok; trust project hooks if using repo-local copies).
 
-## Two arm commands
+## Arm deadlines
 
 One install provides both modes — pick per session when you arm:
 
-| Mode | Arm command | Behavior |
-|------|-------------|----------|
-| **Nudge** (default) | `/deadline 8 "task"` | Countdown context each turn; tool calls are **not** blocked |
-| **Hard** | `/deadline-hard 8 "task"` | Same countdown; after time-up, non-wrap-up tool calls are blocked (git status/diff/add/commit still allowed) |
+| Mode | Behavior |
+|------|----------|
+| **Nudge** (default) | Countdown context each turn; tool calls are **not** blocked |
+| **Hard** | Same countdown; after time-up, non-wrap-up tool calls are blocked (git status/diff/add/commit still allowed) |
 
-Examples:
+The number is **minutes only** from 1 to 1440 (no `m`, `분`, or other unit suffix). Task text is shortened in hook output when it is very long.
+
+### Codex CLI examples
+
+Codex reserves a leading `/` for its built-in slash command menu. Use the no-slash form so the prompt reaches DeadlineDemon's `UserPromptSubmit` hook:
+
+```
+deadline 8 "login page"
+deadline 5 refactor auth
+deadline-hard 10 "ship hotfix"
+```
+
+If you prefer the slash-shaped command in Codex, prefix it with a leading space:
+
+```
+ /deadline 8 "login page"
+ /deadline-hard 10 "ship hotfix"
+```
+
+### Claude Code examples
+
+Use the slash form in Claude Code:
 
 ```
 /deadline 8 "login page"
 /deadline 5 refactor auth
 /deadline-hard 10 "ship hotfix"
 ```
-
-The number is **minutes only** from 1 to 1440 (no `m`, `분`, or other unit suffix). Task text is shortened in hook output when it is very long.
 
 ## Commands
 
