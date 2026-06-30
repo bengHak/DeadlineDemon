@@ -1,0 +1,17 @@
+{
+  "$schema": "https://anthropic.com/claude-code/marketplace.schema.json",
+  "name": "deadline-demon",
+  "description": "Arm session deadlines and nudge AI agents to finish on time, with optional hard enforcement.",
+  "owner": {
+    "name": "DeadlineDemon contributors",
+    "url": "https://github.com/bengHak"
+  },
+  "plugins": [
+    {
+      "name": "deadline-demon",
+      "description": "Session deadline nudges and optional hard enforcement for Codex, Grok, and Claude Code.",
+      "source": "./",
+      "category": "productivity"
+    }
+  ]
+}

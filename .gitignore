@@ -1,3 +1,13 @@
 node_modules/
-dist/
+dist/*
+!dist/cli.js
+!dist/install.js
+!dist/core/
+!dist/core/*.js
+!dist/formatters/
+!dist/formatters/*.js
+!dist/hooks/
+!dist/hooks/*.js
+dist/**/*.d.ts
+dist/tests/
 *.log

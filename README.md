@@ -12,15 +12,31 @@ Works with **Codex CLI**, **Grok Build**, and **Claude Code**.
 
 ## Getting started
 
+### Codex plugin install
+
+Install DeadlineDemon as a native Codex plugin from this GitHub repo:
+
+```bash
+codex plugin marketplace add bengHak/DeadlineDemon
+codex plugin add deadline-demon@deadline-demon
+codex
+```
+
+Open `/hooks`, review and trust the DeadlineDemon lifecycle hooks, and start a new thread.
+
+The Codex plugin runs local Node.js hooks from the installed repo, so `node` must be available on the non-interactive shell PATH.
+
+### Grok, Claude, and local install
+
 Install hooks with **npx** (no clone or global install required):
 
 ```bash
 npx deadline-demon install
 ```
 
-Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into each harness. Re-run `install` after upgrading the package.
+Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into Grok, Codex legacy local plugins, and Claude Code. Re-run `install` after upgrading the package.
 
-Enable the plugin in your harness (`/plugins`, `/hooks` in Codex/Grok; trust project hooks if using repo-local copies).
+Enable the plugin or hooks in your harness (`/plugins`, `/hooks` in Codex/Grok; trust project hooks if using repo-local copies).
 
 ## Two arm commands
 
@@ -74,6 +90,7 @@ npx deadline-demon install
 
 | Harness | Path |
 |---------|------|
+| Codex native plugin | `.codex-plugin/plugin.json` → `hooks/hooks.json` → `dist/cli.js` |
 | Persistent package | `~/.deadline-demon/` |
 | Grok | `~/.grok/plugins/deadline-demon/` |
 | Codex | `~/.codex/plugins/deadline-demon/` |

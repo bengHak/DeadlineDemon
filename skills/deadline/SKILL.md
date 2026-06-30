@@ -6,7 +6,7 @@ argument-hint: "[duration] [task]"
 
 # DeadlineDemon
 
-Install once: `npx deadline-demon install`
+Install once: `codex plugin marketplace add bengHak/DeadlineDemon`, then `codex plugin add deadline-demon@deadline-demon`.
 
 ## Nudge (default)
 
