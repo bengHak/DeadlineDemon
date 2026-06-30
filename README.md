@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="assets/banner.jpg" alt="DeadlineDemon — arm a deadline, nudge your agent to finish on time" width="720">
+  <img src="assets/banner.jpg" alt="DeadlineDemon — arm a deadline, nudge your agent to finish on time" width="360">
 </p>
 
 # DeadlineDemon
