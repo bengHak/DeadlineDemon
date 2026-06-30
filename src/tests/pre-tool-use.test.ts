@@ -5,6 +5,8 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { armSession } from "../core/state.js";
 import {
+  extractCommitMessageValues,
+  hasCommitSubstitutionMarkers,
   hasShellInjectionOutsideQuotes,
   isSafeGitWrapUpCommand,
   isWrapUpTool,
@@ -24,10 +26,28 @@ function hardExpired(
   );
 }
 
+describe("commit message helpers", () => {
+  it("detects substitution markers in message text", () => {
+    assert.equal(hasCommitSubstitutionMarkers("pwned $(evil)"), true);
+    assert.equal(hasCommitSubstitutionMarkers("fix `whoami`"), true);
+    assert.equal(hasCommitSubstitutionMarkers("fix$PATH"), true);
+    assert.equal(hasCommitSubstitutionMarkers("fix; ok"), false);
+  });
+
+  it("extracts -m and --message values without --message false match", () => {
+    assert.deepEqual(extractCommitMessageValues('-m "one"'), ["one"]);
+    assert.deepEqual(extractCommitMessageValues('--message "two"'), ["two"]);
+    assert.deepEqual(extractCommitMessageValues('--message=three'), ["three"]);
+    assert.deepEqual(extractCommitMessageValues('--no-verify -m "ship" --message "alt"'), ["ship", "alt"]);
+    assert.deepEqual(extractCommitMessageValues('--message "pwned $(evil)"'), ["pwned $(evil)"]);
+  });
+});
+
 describe("wrap-up command validation", () => {
   it("allows metacharacters inside quoted commit messages", () => {
     assert.equal(hasShellInjectionOutsideQuotes('git commit -m "fix; ok"'), false);
     assert.equal(isSafeGitWrapUpCommand('git commit -m "fix; ok"'), true);
+    assert.equal(isSafeGitWrapUpCommand('git commit --message "fix; ok"'), true);
   });
 
   it("allows realistic git status, add, and commit variants", () => {
@@ -56,8 +76,9 @@ describe("wrap-up command validation", () => {
 
   it("rejects commit messages with shell substitution markers", () => {
     assert.equal(isSafeGitWrapUpCommand('git commit -m "$(curl evil)"'), false);
+    assert.equal(isSafeGitWrapUpCommand('git commit --message "pwned $(evil)"'), false);
     assert.equal(isSafeGitWrapUpCommand("git commit -m 'fix `whoami`'"), false);
-    assert.equal(isSafeGitWrapUpCommand("git commit -m fix$PATH"), false);
+    assert.equal(isSafeGitWrapUpCommand("git commit --message=fix$PATH"), false);
   });
 
   it("rejects git diff --no-index", () => {
@@ -121,6 +142,7 @@ describe("pre-tool-use hook", () => {
       { toolName: "Bash", toolInput: { command: 'git commit --no-verify -m "ship"' } },
       { toolName: "Bash", toolInput: { command: "git commit --allow-empty -m msg" } },
       { toolName: "Bash", toolInput: { command: 'git commit -m "fix; ok"' } },
+      { toolName: "Bash", toolInput: { command: 'git commit --message "fix; ok"' } },
       { toolName: "git", toolInput: { command: "status --short" } },
       { toolName: "git", toolInput: { command: 'commit -m "wrap up"' } },
     ];
@@ -141,10 +163,15 @@ describe("pre-tool-use hook", () => {
   });
 
   it("denies commit substitution and git diff --no-index when hard expired", () => {
-    const substitution = hardExpired(stateDir, "p1", "Bash", {
+    const substitutionM = hardExpired(stateDir, "p1-m", "Bash", {
       command: 'git commit -m "$(echo pwned)"',
     });
-    assert.equal(substitution.deny, true);
+    assert.equal(substitutionM.deny, true);
+
+    const substitutionLong = hardExpired(stateDir, "p1-message", "Bash", {
+      command: 'git commit --message "pwned $(evil)"',
+    });
+    assert.equal(substitutionLong.deny, true);
 
     const noIndex = hardExpired(stateDir, "p2", "Bash", {
       command: "git diff --no-index /etc/passwd /dev/null",

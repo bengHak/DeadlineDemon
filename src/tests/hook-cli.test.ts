@@ -128,7 +128,7 @@ describe("hook CLI piping", () => {
     assert.equal(status, 2);
   });
 
-  it("denies commit substitution via CLI when hard expired", () => {
+  it("denies commit substitution via CLI when hard expired (-m)", () => {
     armSession(stateDir, "cli-p1", 60, "task", 100, true);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -137,6 +137,23 @@ describe("hook CLI piping", () => {
         session_id: "cli-p1",
         toolName: "Bash",
         toolInput: { command: 'git commit -m "$(echo pwned)"' },
+      },
+      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+    );
+    const parsed = JSON.parse(stdout.trim()) as { decision: string };
+    assert.equal(parsed.decision, "deny");
+    assert.equal(status, 2);
+  });
+
+  it("denies commit substitution via CLI when hard expired (--message)", () => {
+    armSession(stateDir, "cli-p1-msg", 60, "task", 100, true);
+    const { stdout, status } = runHook(
+      "pre-tool-use",
+      {
+        hook_event_name: "PreToolUse",
+        session_id: "cli-p1-msg",
+        toolName: "Bash",
+        toolInput: { command: 'git commit --message "pwned $(evil)"' },
       },
       { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
     );

@@ -68,7 +68,8 @@ export function hasCommitSubstitutionMarkers(message: string): boolean {
 /** Extract -m / --message argument values from git commit argv tail. */
 export function extractCommitMessageValues(commitArgs: string): string[] {
   const values: string[] = [];
-  const pattern = /-(?:m|--message)(?:\s*=?\s*("[^"]*"|'[^']*'|[^\s-]+))?/gi;
+  // --message must precede -m so we do not match the "-m" inside "--message".
+  const pattern = /(?:--message|-m)(?:\s*=?\s*("[^"]*"|'[^']*'|[^\s-]+))?/gi;
   let match: RegExpExecArray | null;
   while ((match = pattern.exec(commitArgs)) !== null) {
     const raw = match[1];
