@@ -5,6 +5,7 @@ import {
   installTargets,
   persistentCliPath,
   persistentInstallDir,
+  uninstallTargets,
   validateHookManifest,
 } from "../install.js";
 
@@ -27,5 +28,17 @@ describe("install", () => {
   it("uses a persistent home install path for npx-safe hooks", () => {
     assert.match(persistentInstallDir(), /\.deadline-demon$/);
     assert.match(persistentCliPath(), /\/\.deadline-demon\/dist\/cli\.js$/);
+  });
+});
+
+describe("uninstall", () => {
+  it("reports persistent dir and three harness targets on dry-run", () => {
+    const targets = uninstallTargets(true);
+    assert.equal(targets.length, 4);
+    assert.equal(targets[0].platform, "persistent");
+    assert.deepEqual(
+      targets.slice(1).map((t) => t.platform),
+      ["grok", "codex", "claude"],
+    );
   });
 });

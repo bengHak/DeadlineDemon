@@ -61,10 +61,12 @@ The number is **minutes only** from 1 to 1440 (no `m`, `분`, or other unit suff
 
 ```bash
 npx deadline-demon install [--dry-run]
+npx deadline-demon uninstall [--dry-run]
 npx deadline-demon status [--session-id <id>]
 npx deadline-demon reset [--session-id <id>]
 ```
 
+- **uninstall** — remove `~/.deadline-demon/`, Grok/Codex plugin dirs, and the Claude hooks file created by `install`
 - **status** — show armed sessions, remaining time, and mode (`nudge` or `hard`)
 - **reset** — clear one session or all armed sessions
 

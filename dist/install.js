@@ -1,4 +1,4 @@
-import { cpSync, existsSync, mkdirSync, readFileSync, writeFileSync } from "node:fs";
+import { cpSync, existsSync, mkdirSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -31,10 +31,9 @@ export function syncPersistentInstall(root) {
     cpSync(join(root, "templates"), join(dest, "templates"), { recursive: true });
     return persistentCliPath();
 }
-export function installTargets(dryRun = false) {
-    const root = packageRoot();
+export function harnessInstallTargets() {
     const home = homedir();
-    const targets = [
+    return [
         {
             platform: "grok",
             path: join(home, ".grok", "plugins", "deadline-demon"),
@@ -51,6 +50,41 @@ export function installTargets(dryRun = false) {
             action: "write-hooks",
         },
     ];
+}
+export function uninstallTargetList() {
+    const persistent = {
+        platform: "persistent",
+        path: persistentInstallDir(),
+        action: "remove-dir",
+    };
+    const harness = harnessInstallTargets().map((target) => ({
+        platform: target.platform,
+        path: target.path,
+        action: target.action === "copy-plugin" ? "remove-dir" : "remove-file",
+    }));
+    return [persistent, ...harness];
+}
+function applyUninstallTarget(target) {
+    if (!existsSync(target.path))
+        return;
+    if (target.action === "remove-dir") {
+        rmSync(target.path, { recursive: true, force: true });
+        return;
+    }
+    rmSync(target.path, { force: true });
+}
+export function uninstallTargets(dryRun = false) {
+    const targets = uninstallTargetList();
+    if (!dryRun) {
+        for (const target of targets) {
+            applyUninstallTarget(target);
+        }
+    }
+    return targets;
+}
+export function installTargets(dryRun = false) {
+    const root = packageRoot();
+    const targets = harnessInstallTargets();
     if (dryRun)
         return targets;
     const cliPath = syncPersistentInstall(root).replace(/\\/g, "/");

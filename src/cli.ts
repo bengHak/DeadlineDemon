@@ -11,7 +11,7 @@ import {
 } from "./core/state.js";
 import { resolveNowSec } from "./core/clock.js";
 import { formatRemaining } from "./core/duration.js";
-import { installTargets, validateHookManifest } from "./install.js";
+import { installTargets, uninstallTargets, validateHookManifest } from "./install.js";
 import type { Platform } from "./formatters/platform.js";
 
 const MAX_HOOK_PAYLOAD_BYTES = 1_048_576;
@@ -124,6 +124,18 @@ async function main(): Promise<void> {
     return;
   }
 
+  if (command === "uninstall") {
+    const dryRun = args.includes("--dry-run");
+    const targets = uninstallTargets(dryRun);
+    processStdout.write("uninstall: remove hooks and persistent install\n");
+    for (const target of targets) {
+      processStdout.write(
+        `${target.platform}: ${target.path} (${target.action})${dryRun ? " [dry-run]" : ""}\n`,
+      );
+    }
+    return;
+  }
+
   if (command === "status") {
     const sessionIdx = args.indexOf("--session-id");
     printStatus(sessionIdx >= 0 ? args[sessionIdx + 1] : undefined);
@@ -138,6 +150,7 @@ async function main(): Promise<void> {
 
   processStdout.write(`Usage:
   deadline-demon install [--dry-run]
+  deadline-demon uninstall [--dry-run]
   deadline-demon status [--session-id <id>]
   deadline-demon reset [--session-id <id>]
   deadline-demon hook user-prompt-submit [--platform codex|claude|grok]

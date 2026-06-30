@@ -1,7 +1,7 @@
 import { describe, it, beforeEach, afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { spawnSync } from "node:child_process";
-import { mkdtempSync, rmSync } from "node:fs";
+import { existsSync, mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -213,5 +213,53 @@ describe("install CLI", () => {
     assert.equal(status, 0);
     assert.match(stdout, /UserPromptSubmit \+ PreToolUse/i);
     assert.match(stdout, /\/deadline or \/deadline-hard/i);
+  });
+});
+
+describe("uninstall CLI", () => {
+  let home: string;
+
+  beforeEach(() => {
+    home = mkdtempSync(join(tmpdir(), "deadline-demon-home-"));
+  });
+
+  afterEach(() => {
+    rmSync(home, { recursive: true, force: true });
+  });
+
+  it("dry-run names grok, codex, claude, and persistent install path", () => {
+    const env = { ...process.env, HOME: home };
+    const { stdout, status } = runCli(["uninstall", "--dry-run"], env);
+    assert.equal(status, 0);
+    assert.match(stdout, /grok:/i);
+    assert.match(stdout, /codex:/i);
+    assert.match(stdout, /claude:/i);
+    assert.match(stdout, /persistent:/i);
+    assert.match(stdout, /\.deadline-demon/);
+  });
+
+  it("install then uninstall removes all artifacts with isolated HOME", () => {
+    const env = { ...process.env, HOME: home };
+
+    const install = runCli(["install"], env);
+    assert.equal(install.status, 0);
+
+    const persistent = join(home, ".deadline-demon");
+    const grok = join(home, ".grok", "plugins", "deadline-demon");
+    const codex = join(home, ".codex", "plugins", "deadline-demon");
+    const claude = join(home, ".claude", "hooks", "deadline-demon.json");
+
+    assert.ok(existsSync(persistent));
+    assert.ok(existsSync(grok));
+    assert.ok(existsSync(codex));
+    assert.ok(existsSync(claude));
+
+    const uninstall = runCli(["uninstall"], env);
+    assert.equal(uninstall.status, 0);
+
+    assert.ok(!existsSync(persistent));
+    assert.ok(!existsSync(grok));
+    assert.ok(!existsSync(codex));
+    assert.ok(!existsSync(claude));
   });
 });
