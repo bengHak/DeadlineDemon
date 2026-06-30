@@ -45,7 +45,7 @@ Examples:
 /deadline-hard 10 "ship hotfix"
 ```
 
-The number is **minutes only** (no `m`, `분`, or other unit suffix).
+The number is **minutes only** from 1 to 1440 (no `m`, `분`, or other unit suffix). Task text is shortened in hook output when it is very long.
 
 ## Commands
 
@@ -90,15 +90,6 @@ npx deadline-demon install
 ```bash
 npm test
 ```
-
-### Publish to npm
-
-```bash
-npm login
-npm publish
-```
-
-After publish, users can run `npx deadline-demon install` without the `github:` prefix.
 
 ### How it differs from timer hooks
 
