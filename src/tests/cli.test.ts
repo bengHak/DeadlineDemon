@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import {
   hookManifestHasPreToolUse,
   installTargets,
+  persistentCliPath,
+  persistentInstallDir,
   validateHookManifest,
 } from "../install.js";
 
@@ -14,23 +16,16 @@ describe("install", () => {
       targets.map((t) => t.platform),
       ["grok", "codex", "claude"],
     );
-    assert.equal(targets.every((t) => t.hard === false), true);
   });
 
-  it("marks hard mode on dry-run when requested", () => {
-    const targets = installTargets(true, true);
-    assert.equal(targets.every((t) => t.hard === true), true);
-  });
-
-  it("validates nudge hook manifest without PreToolUse", () => {
-    const path = validateHookManifest(false);
+  it("validates hook manifest with UserPromptSubmit and PreToolUse", () => {
+    const path = validateHookManifest();
     assert.match(path, /hooks\.json$/);
-    assert.equal(hookManifestHasPreToolUse(false), false);
+    assert.equal(hookManifestHasPreToolUse(), true);
   });
 
-  it("validates hard hook manifest with PreToolUse", () => {
-    const path = validateHookManifest(true);
-    assert.match(path, /hooks-hard\.json$/);
-    assert.equal(hookManifestHasPreToolUse(true), true);
+  it("uses a persistent home install path for npx-safe hooks", () => {
+    assert.match(persistentInstallDir(), /\.deadline-demon$/);
+    assert.match(persistentCliPath(), /\/\.deadline-demon\/dist\/cli\.js$/);
   });
 });

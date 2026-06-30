@@ -1,36 +1,39 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { extractDeadlineArm, formatRemaining, parseDurationSeconds } from "../core/duration.js";
+import { extractDeadlineArm, formatRemaining, parseDurationSeconds, parseMinutes } from "../core/duration.js";
+
+describe("parseMinutes", () => {
+  it("parses bare minute counts", () => {
+    assert.equal(parseMinutes("8"), 8);
+    assert.equal(parseMinutes("  15  "), 15);
+  });
+
+  it("rejects units and invalid input", () => {
+    assert.equal(parseMinutes("8m"), null);
+    assert.equal(parseMinutes("5분"), null);
+    assert.equal(parseMinutes("0"), null);
+    assert.equal(parseMinutes("not-a-number"), null);
+  });
+});
 
 describe("parseDurationSeconds", () => {
-  it("parses minutes in English and Korean", () => {
-    assert.equal(parseDurationSeconds("8m"), 480);
-    assert.equal(parseDurationSeconds("5분"), 300);
-    assert.equal(parseDurationSeconds("2 hours"), 7200);
-    assert.equal(parseDurationSeconds("90s"), 90);
-  });
-
-  it("returns null for invalid input", () => {
-    assert.equal(parseDurationSeconds("not-a-duration"), null);
-  });
-
-  it("parses duration from full /deadline-hard slash command", () => {
-    assert.equal(parseDurationSeconds("/deadline-hard 8m"), 480);
-    assert.equal(parseDurationSeconds("/deadline 5분"), 300);
+  it("converts bare minutes to seconds", () => {
+    assert.equal(parseDurationSeconds("8"), 480);
+    assert.equal(parseDurationSeconds("5"), 300);
   });
 });
 
 describe("extractDeadlineArm", () => {
-  it("extracts duration and quoted task from slash command", () => {
-    const arm = extractDeadlineArm('/deadline 8m "login page"');
+  it("extracts minutes and quoted task", () => {
+    const arm = extractDeadlineArm('/deadline 8 "login page"');
     assert.ok(arm);
     assert.equal(arm.deadlineSec, 480);
     assert.equal(arm.task, "login page");
     assert.equal(arm.hard, false);
   });
 
-  it("extracts Korean duration", () => {
-    const arm = extractDeadlineArm("/deadline 5분 refactor auth");
+  it("extracts unquoted task", () => {
+    const arm = extractDeadlineArm("/deadline 5 refactor auth");
     assert.ok(arm);
     assert.equal(arm.deadlineSec, 300);
     assert.equal(arm.task, "refactor auth");
@@ -38,11 +41,16 @@ describe("extractDeadlineArm", () => {
   });
 
   it("arms hard mode from /deadline-hard", () => {
-    const arm = extractDeadlineArm('/deadline-hard 10m "ship it"');
+    const arm = extractDeadlineArm('/deadline-hard 10 "ship it"');
     assert.ok(arm);
     assert.equal(arm.deadlineSec, 600);
     assert.equal(arm.task, "ship it");
     assert.equal(arm.hard, true);
+  });
+
+  it("rejects legacy unit suffixes", () => {
+    assert.equal(extractDeadlineArm('/deadline 8m "login"'), null);
+    assert.equal(extractDeadlineArm("/deadline 5분 task"), null);
   });
 });
 

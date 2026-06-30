@@ -10,6 +10,18 @@
           }
         ]
       }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${DEADLINE_DEMON_CLI}\" hook pre-tool-use",
+            "timeout": 5
+          }
+        ]
+      }
     ]
   }
 }

@@ -8,61 +8,105 @@ Cross-CLI hook tool that arms session deadlines and nudges AI agents to finish o
 
 Works with **Codex CLI**, **Grok Build**, and **Claude Code**.
 
-## Quick start
+## Getting started
+
+Install hooks with **npx** (no clone or global install required):
 
 ```bash
+npx deadline-demon install
+```
+
+Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into each harness. Re-run `install` after upgrading.
+
+Enable the plugin in your harness (`/plugins`, `/hooks` in Codex/Grok; trust project hooks if using repo-local copies).
+
+### Before npm publish
+
+If the package is not on npm yet, install directly from GitHub:
+
+```bash
+npx github:bengHak/DeadlineDemon install
+```
+
+## Two arm commands
+
+One install provides both modes — pick per session when you arm:
+
+| Mode | Arm command | Behavior |
+|------|-------------|----------|
+| **Nudge** (default) | `/deadline 8 "task"` | Countdown context each turn; tool calls are **not** blocked |
+| **Hard** | `/deadline-hard 8 "task"` | Same countdown; after time-up, non-wrap-up tool calls are blocked (git status/diff/add/commit still allowed) |
+
+Examples:
+
+```
+/deadline 8 "login page"
+/deadline 5 refactor auth
+/deadline-hard 10 "ship hotfix"
+```
+
+The number is **minutes only** (no `m`, `분`, or other unit suffix).
+
+## Commands
+
+```bash
+npx deadline-demon install [--dry-run]
+npx deadline-demon status [--session-id <id>]
+npx deadline-demon reset [--session-id <id>]
+```
+
+- **status** — show armed sessions, remaining time, and mode (`nudge` or `hard`)
+- **reset** — clear one session or all armed sessions
+
+## Grok note
+
+If Grok ignores `UserPromptSubmit` stdout, nudge text may not appear. Tool blocking applies only to sessions armed with `/deadline-hard` (the `PreToolUse` hook is installed but allows all tools for `/deadline` sessions).
+
+---
+
+## Development
+
+### Build and install from source
+
+```bash
+git clone git@github.com:bengHak/DeadlineDemon.git
+cd DeadlineDemon
 npm install
 npm run build
 npx deadline-demon install
 ```
 
-Arm a **nudge-only** deadline in any hooked session:
-
-```
-/deadline 8m "login page"
-/deadline 5분 refactor auth
-```
-
-Every user prompt injects remaining time and escalating urgency. Tool calls are **not** blocked.
-
-## Two modes
-
-| Mode | Arm command | Install | Behavior |
-|------|-------------|---------|----------|
-| **Nudge** (default) | `/deadline` | `deadline-demon install` | Countdown context each turn; tools always allowed |
-| **Hard** (opt-in) | `/deadline-hard` | `deadline-demon install --hard` | Same countdown; after time-up, `PreToolUse` blocks non-wrap-up tools (git status/diff/add/commit still allowed) |
-
-Hard mode requires **both** `install --hard` (registers the `PreToolUse` hook) **and** arming with `/deadline-hard`. Nudge mode never denies tools even if the `pre-tool-use` CLI is invoked manually.
-
-## CLI
-
-```bash
-deadline-demon install [--dry-run] [--hard]
-deadline-demon status [--session-id <id>]
-deadline-demon reset [--session-id <id>]
-```
-
-## Install targets
+### Install targets
 
 | Harness | Path |
 |---------|------|
+| Persistent package | `~/.deadline-demon/` |
 | Grok | `~/.grok/plugins/deadline-demon/` |
 | Codex | `~/.codex/plugins/deadline-demon/` |
-| Claude | `~/.claude/hooks/deadline-demon.json` |
+| Claude | `~/.claude/hooks/deadline-demon.json` → `~/.deadline-demon/dist/cli.js` |
 
-Enable the plugin in Codex/Grok (`/plugins`, `/hooks`) and trust project hooks if using repo-local copies.
+### Test
 
-## How it differs from timer hooks
+```bash
+npm test
+```
+
+### Publish to npm
+
+```bash
+npm login
+npm publish
+```
+
+After publish, users can run `npx deadline-demon install` without the `github:` prefix.
+
+### How it differs from timer hooks
 
 Existing Claude timer hooks **report elapsed time**. DeadlineDemon **reminds the agent of a deadline**:
 
 - `/deadline N` arms a nudge-only session timer
+- `/deadline-hard N` arms the same timer with tool-call enforcement after time-up
 - Every prompt injects remaining time with escalating urgency
-- Optional `/deadline-hard` + `install --hard` adds tool-call enforcement after time-up
-
-## Grok note
-
-If Grok ignores `UserPromptSubmit` stdout, nudge text may not appear. Tool blocking applies only when you opted into `install --hard` and armed with `/deadline-hard`; there is no silent hard fallback in the default install.
 
 ## License
 

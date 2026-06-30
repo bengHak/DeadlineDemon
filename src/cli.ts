@@ -113,16 +113,13 @@ async function main(): Promise<void> {
 
   if (command === "install") {
     const dryRun = args.includes("--dry-run");
-    const hard = args.includes("--hard");
-    const targets = installTargets(dryRun, hard);
-    processStdout.write(
-      `install mode: ${hard ? "hard (UserPromptSubmit + PreToolUse)" : "nudge (UserPromptSubmit only)"}\n`,
-    );
+    const targets = installTargets(dryRun);
+    processStdout.write("install: UserPromptSubmit + PreToolUse (use /deadline or /deadline-hard to arm)\n");
     for (const target of targets) {
       processStdout.write(`${target.platform}: ${target.path} (${target.action})${dryRun ? " [dry-run]" : ""}\n`);
     }
     if (!dryRun) {
-      processStdout.write(`manifest: ${validateHookManifest(hard)}\n`);
+      processStdout.write(`manifest: ${validateHookManifest()}\n`);
     }
     return;
   }
@@ -140,7 +137,7 @@ async function main(): Promise<void> {
   }
 
   processStdout.write(`Usage:
-  deadline-demon install [--dry-run] [--hard]
+  deadline-demon install [--dry-run]
   deadline-demon status [--session-id <id>]
   deadline-demon reset [--session-id <id>]
   deadline-demon hook user-prompt-submit [--platform codex|claude|grok]

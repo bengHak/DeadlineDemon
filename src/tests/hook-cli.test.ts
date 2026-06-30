@@ -49,7 +49,7 @@ describe("hook CLI piping", () => {
       {
         hook_event_name: "UserPromptSubmit",
         session_id: "cli-arm",
-        prompt: '/deadline 8m "login"',
+        prompt: '/deadline 8 "login"',
       },
       { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir },
     );
@@ -64,7 +64,7 @@ describe("hook CLI piping", () => {
       {
         hook_event_name: "UserPromptSubmit",
         session_id: "cli-hard-arm",
-        prompt: '/deadline-hard 8m "login"',
+        prompt: '/deadline-hard 8 "login"',
       },
       { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir },
     );
@@ -207,17 +207,11 @@ describe("hook CLI piping", () => {
   });
 });
 
-describe("install CLI modes", () => {
-  it("reports nudge mode without PreToolUse on default dry-run", () => {
+describe("install CLI", () => {
+  it("registers both hooks on dry-run", () => {
     const { stdout, status } = runCli(["install", "--dry-run"], process.env);
     assert.equal(status, 0);
-    assert.match(stdout, /nudge \(UserPromptSubmit only\)/i);
-    assert.doesNotMatch(stdout, /PreToolUse.*enforc/i);
-  });
-
-  it("reports hard mode with PreToolUse on --hard dry-run", () => {
-    const { stdout, status } = runCli(["install", "--hard", "--dry-run"], process.env);
-    assert.equal(status, 0);
-    assert.match(stdout, /hard \(UserPromptSubmit \+ PreToolUse\)/i);
+    assert.match(stdout, /UserPromptSubmit \+ PreToolUse/i);
+    assert.match(stdout, /\/deadline or \/deadline-hard/i);
   });
 });

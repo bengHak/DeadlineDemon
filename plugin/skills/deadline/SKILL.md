@@ -6,26 +6,26 @@ argument-hint: "[duration] [task]"
 
 # DeadlineDemon
 
-## Nudge-only (default)
+Install once: `npx deadline-demon install`
 
-Arm a countdown reminder for this session:
+## Nudge (default)
 
 ```
-/deadline 8m "login page"
-/deadline 5분 refactor auth
+/deadline 8 "login page"
+/deadline 5 refactor auth
 ```
+
+Minutes only — no unit suffix (`8`, not `8m`).
 
 Each user turn receives remaining time and urgency text. Tool calls are not blocked.
 
-## Hard enforcement (opt-in)
-
-Requires `deadline-demon install --hard` on the user's machine **and**:
+## Hard enforcement
 
 ```
-/deadline-hard 8m "login page"
+/deadline-hard 8 "login page"
 ```
 
-After time runs out, non-wrap-up tool calls are blocked; safe git wrap-up (status, diff, add, commit) still works.
+Same countdown, but after time runs out non-wrap-up tool calls are blocked; safe git wrap-up (status, diff, add, commit) still works.
 
 Check status: `deadline-demon status`
 Reset: `deadline-demon reset`

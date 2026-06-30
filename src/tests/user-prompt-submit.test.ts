@@ -19,7 +19,7 @@ describe("user-prompt-submit hook", () => {
 
   it("arms on /deadline command (nudge-only)", () => {
     const output = runUserPromptSubmitHook(
-      { hook_event_name: "UserPromptSubmit", session_id: "s1", prompt: "/deadline 8m login" },
+      { hook_event_name: "UserPromptSubmit", session_id: "s1", prompt: "/deadline 8 login" },
       { stateDir, nowSec: 100, platform: "codex" },
     );
     assert.match(output, /Deadline armed/i);
@@ -31,7 +31,7 @@ describe("user-prompt-submit hook", () => {
 
   it("arms hard mode on /deadline-hard command", () => {
     const output = runUserPromptSubmitHook(
-      { hook_event_name: "UserPromptSubmit", session_id: "s1h", prompt: '/deadline-hard 8m "login"' },
+      { hook_event_name: "UserPromptSubmit", session_id: "s1h", prompt: '/deadline-hard 8 "login"' },
       { stateDir, nowSec: 100, platform: "codex" },
     );
     assert.match(output, /Hard enforcement/i);
