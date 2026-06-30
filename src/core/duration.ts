@@ -27,19 +27,26 @@ export function parseDurationSeconds(input: string): number | null {
   return value;
 }
 
-export function extractDeadlineArm(input: string): { deadlineSec: number; task: string } | null {
+export type DeadlineArm = {
+  deadlineSec: number;
+  task: string;
+  hard: boolean;
+};
+
+export function extractDeadlineArm(input: string): DeadlineArm | null {
   const match = input.match(
-    /(?:^|\s)\/?deadline\s+(\d+\s*(?:분|分钟|min(?:ute)?s?|m|시간|小时|hour?s?|h|초|秒|sec(?:ond)?s?|s))(?:\s+["']([^"']+)["']|\s+(.+))?/i,
+    /(?:^|\s)\/?deadline(-hard)?\s+(\d+\s*(?:분|分钟|min(?:ute)?s?|m|시간|小时|hour?s?|h|초|秒|sec(?:ond)?s?|s))(?:\s+["']([^"']+)["']|\s+(.+))?/i,
   );
   if (!match) return null;
 
-  const deadlineSec = parseDurationSeconds(match[1]);
+  const hard = match[1] === "-hard";
+  const deadlineSec = parseDurationSeconds(match[2]);
   if (deadlineSec === null || deadlineSec <= 0) return null;
 
-  const quoted = match[2]?.trim();
-  const rest = match[3]?.trim();
+  const quoted = match[3]?.trim();
+  const rest = match[4]?.trim();
   const task = quoted ?? rest ?? "";
-  return { deadlineSec, task };
+  return { deadlineSec, task, hard };
 }
 
 export function formatRemaining(seconds: number): string {

@@ -42,7 +42,7 @@ export function runUserPromptSubmitHook(
 
   const arm = extractDeadlineArm(prompt);
   if (arm) {
-    const state = armSession(stateDir, sessionId, arm.deadlineSec, arm.task, nowSec);
+    const state = armSession(stateDir, sessionId, arm.deadlineSec, arm.task, nowSec, arm.hard);
     return formatUserPromptOutput(platform, armConfirmation(state));
   }
 

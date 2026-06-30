@@ -4,7 +4,19 @@ import { resolveNowSec } from "../core/clock.js";
 import { resolvePlatform } from "../formatters/platform.js";
 import { formatPreToolAllow, formatPreToolDeny } from "../formatters/output.js";
 
-const WRAP_UP_TOOLS = /^(git|run_terminal_command|Bash|Shell)$/i;
+const SAFE_GIT_PATH = "[A-Za-z0-9._/@:+,=-]+";
+const SAFE_GIT_COMMANDS = [
+  /^git status(?:\s+(?:--short|-s|--branch|-b|--porcelain(?:=[12])?))*$/,
+  new RegExp(`^git diff(?:\\s+(?:--cached|--staged|--stat|--name-only|--name-status|--check|--|${SAFE_GIT_PATH}))*$`),
+  new RegExp(`^git add\\s+${SAFE_GIT_PATH}(?:\\s+${SAFE_GIT_PATH})*$`),
+  new RegExp(`^git commit\\s+-m\\s+(?:"[^"\\r\\n;&|$<>` + "`" + `]*"|'[^'\\r\\n;&|$<>` + "`" + `]*'|${SAFE_GIT_PATH})$`),
+] as const;
+const SHELL_CONTROL_CHARS = /[;&|$<>`\r\n]/;
+
+function isWrapUpToolName(toolName: string): boolean {
+  const normalized = toolName.toLowerCase();
+  return normalized === "git" || normalized === "run_terminal_command" || normalized === "bash" || normalized === "shell";
+}
 
 function sessionIdFromInput(input: Record<string, unknown>): string {
   const candidates = [input["session_id"], input["sessionId"], input["GROK_SESSION_ID"]];
@@ -27,14 +39,16 @@ function toolInputFromInput(input: Record<string, unknown>): Record<string, unkn
 }
 
 function isWrapUpTool(toolName: string, toolInput: Record<string, unknown>): boolean {
-  if (!WRAP_UP_TOOLS.test(toolName)) return false;
+  if (!isWrapUpToolName(toolName)) return false;
   const command =
     typeof toolInput["command"] === "string"
       ? toolInput["command"]
       : typeof toolInput["cmd"] === "string"
         ? toolInput["cmd"]
         : "";
-  return /\bgit\s+(add|commit|status|diff)\b/.test(command);
+  const normalized = command.trim().replace(/\s+/g, " ");
+  if (normalized.length === 0 || SHELL_CONTROL_CHARS.test(normalized)) return false;
+  return SAFE_GIT_COMMANDS.some((pattern) => pattern.test(normalized));
 }
 
 export function runPreToolUseHook(
@@ -56,7 +70,7 @@ export function runPreToolUseHook(
   }
 
   const remain = remainingSeconds(state, resolveNowSec(options?.nowSec));
-  if (remain > 0) {
+  if (remain > 0 || !state.hard) {
     return { output: formatPreToolAllow(platform), deny: false };
   }
 

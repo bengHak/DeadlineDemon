@@ -34,8 +34,17 @@ describe("pre-tool-use hook", () => {
     assert.equal(result.deny, false);
   });
 
-  it("denies when armed and expired", () => {
-    armSession(stateDir, "s3", 60, "task", 100);
+  it("allows when soft (nudge) armed and expired", () => {
+    armSession(stateDir, "s3-soft", 60, "task", 100, false);
+    const result = runPreToolUseHook(
+      { hook_event_name: "PreToolUse", session_id: "s3-soft", toolName: "Bash", toolInput: { command: "ls" } },
+      { stateDir, nowSec: 200, platform: "codex" },
+    );
+    assert.equal(result.deny, false);
+  });
+
+  it("denies when hard armed and expired", () => {
+    armSession(stateDir, "s3", 60, "task", 100, true);
     const result = runPreToolUseHook(
       { hook_event_name: "PreToolUse", session_id: "s3", toolName: "Bash", toolInput: { command: "ls" } },
       { stateDir, nowSec: 200, platform: "codex" },
@@ -44,8 +53,8 @@ describe("pre-tool-use hook", () => {
     assert.match(result.output, /deny/i);
   });
 
-  it("allows git commit when expired", () => {
-    armSession(stateDir, "s4", 60, "task", 100);
+  it("allows git commit when hard expired", () => {
+    armSession(stateDir, "s4", 60, "task", 100, true);
     const result = runPreToolUseHook(
       {
         hook_event_name: "PreToolUse",
@@ -58,8 +67,50 @@ describe("pre-tool-use hook", () => {
     assert.equal(result.deny, false);
   });
 
-  it("emits block decision for claude when expired", () => {
-    armSession(stateDir, "s5", 60, "task", 100);
+  it("denies chained shell commands even when they start with safe git", () => {
+    armSession(stateDir, "s4-chain", 60, "task", 100, true);
+    const result = runPreToolUseHook(
+      {
+        hook_event_name: "PreToolUse",
+        session_id: "s4-chain",
+        toolName: "Bash",
+        toolInput: { command: "git status && echo bypass" },
+      },
+      { stateDir, nowSec: 200, platform: "codex" },
+    );
+    assert.equal(result.deny, true);
+  });
+
+  it("allows a safe git status command when hard expired", () => {
+    armSession(stateDir, "s4-status", 60, "task", 100, true);
+    const result = runPreToolUseHook(
+      {
+        hook_event_name: "PreToolUse",
+        session_id: "s4-status",
+        toolName: "Bash",
+        toolInput: { command: "git status --short" },
+      },
+      { stateDir, nowSec: 200, platform: "codex" },
+    );
+    assert.equal(result.deny, false);
+  });
+
+  it("denies extra git commit arguments after the message", () => {
+    armSession(stateDir, "s4-commit-extra", 60, "task", 100, true);
+    const result = runPreToolUseHook(
+      {
+        hook_event_name: "PreToolUse",
+        session_id: "s4-commit-extra",
+        toolName: "Bash",
+        toolInput: { command: "git commit -m done --no-verify" },
+      },
+      { stateDir, nowSec: 200, platform: "codex" },
+    );
+    assert.equal(result.deny, true);
+  });
+
+  it("emits block decision for claude when hard expired", () => {
+    armSession(stateDir, "s5", 60, "task", 100, true);
     const result = runPreToolUseHook(
       {
         hookEventName: "PreToolUse",

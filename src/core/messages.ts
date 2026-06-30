@@ -28,8 +28,11 @@ ${taskLine}Summarize what you completed, commit if applicable, and reply DONE.`;
 
 export function armConfirmation(state: SessionState): string {
   const taskLine = state.task ? ` for "${state.task}"` : "";
+  const modeLine = state.hard
+    ? "Hard enforcement is active — tool calls will be blocked after time runs out."
+    : "Reminder-only — countdown nudges each turn; tool calls are not blocked.";
   return `${MARKER}
-⏱️ Deadline armed: ${formatRemaining(state.deadlineSec)}${taskLine}. Countdown is active — finish before time runs out.`;
+⏱️ Deadline armed: ${formatRemaining(state.deadlineSec)}${taskLine}. ${modeLine}`;
 }
 
 export function timeUpDenyReason(state: SessionState): string {

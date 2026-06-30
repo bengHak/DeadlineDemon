@@ -14,6 +14,8 @@ import { formatRemaining } from "./core/duration.js";
 import { installTargets, validateHookManifest } from "./install.js";
 import type { Platform } from "./formatters/platform.js";
 
+const MAX_HOOK_PAYLOAD_BYTES = 1_048_576;
+
 function parseHookArgs(args: string[]): { hookName: string; platform?: Platform } {
   const hookName = args[1];
   const platformIdx = args.indexOf("--platform");
@@ -27,10 +29,16 @@ function parseHookArgs(args: string[]): { hookName: string; platform?: Platform 
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
+  let bytesRead = 0;
   for await (const chunk of processStdin) {
-    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+    const buffer = Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk);
+    bytesRead += buffer.byteLength;
+    if (bytesRead > MAX_HOOK_PAYLOAD_BYTES) {
+      throw new Error(`Hook payload exceeds ${MAX_HOOK_PAYLOAD_BYTES} bytes`);
+    }
+    chunks.push(buffer);
   }
-  return Buffer.concat(chunks).toString("utf8");
+  return Buffer.concat(chunks, bytesRead).toString("utf8");
 }
 
 function printStatus(sessionId?: string): void {
@@ -44,7 +52,7 @@ function printStatus(sessionId?: string): void {
     }
     const remain = remainingSeconds(state, nowSec);
     processStdout.write(
-      `session=${state.sessionId} armed=true remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
+      `session=${state.sessionId} armed=true mode=${state.hard ? "hard" : "nudge"} remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
     );
     return;
   }
@@ -57,7 +65,7 @@ function printStatus(sessionId?: string): void {
   for (const state of sessions) {
     const remain = remainingSeconds(state, nowSec);
     processStdout.write(
-      `session=${state.sessionId} remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
+      `session=${state.sessionId} mode=${state.hard ? "hard" : "nudge"} remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
     );
   }
 }
@@ -99,19 +107,22 @@ async function main(): Promise<void> {
       const result = runPreToolUseHook(input, hookOptions);
       processStdout.write(result.output);
       process.exit(result.deny ? 2 : 0);
-      return;
     }
     throw new Error(`Unknown hook: ${hookName ?? "(missing)"}`);
   }
 
   if (command === "install") {
     const dryRun = args.includes("--dry-run");
-    const targets = installTargets(dryRun);
+    const hard = args.includes("--hard");
+    const targets = installTargets(dryRun, hard);
+    processStdout.write(
+      `install mode: ${hard ? "hard (UserPromptSubmit + PreToolUse)" : "nudge (UserPromptSubmit only)"}\n`,
+    );
     for (const target of targets) {
       processStdout.write(`${target.platform}: ${target.path} (${target.action})${dryRun ? " [dry-run]" : ""}\n`);
     }
     if (!dryRun) {
-      processStdout.write(`manifest: ${validateHookManifest()}\n`);
+      processStdout.write(`manifest: ${validateHookManifest(hard)}\n`);
     }
     return;
   }
@@ -129,7 +140,7 @@ async function main(): Promise<void> {
   }
 
   processStdout.write(`Usage:
-  deadline-demon install [--dry-run]
+  deadline-demon install [--dry-run] [--hard]
   deadline-demon status [--session-id <id>]
   deadline-demon reset [--session-id <id>]
   deadline-demon hook user-prompt-submit [--platform codex|claude|grok]

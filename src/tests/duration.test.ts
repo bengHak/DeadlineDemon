@@ -21,6 +21,7 @@ describe("extractDeadlineArm", () => {
     assert.ok(arm);
     assert.equal(arm.deadlineSec, 480);
     assert.equal(arm.task, "login page");
+    assert.equal(arm.hard, false);
   });
 
   it("extracts Korean duration", () => {
@@ -28,6 +29,15 @@ describe("extractDeadlineArm", () => {
     assert.ok(arm);
     assert.equal(arm.deadlineSec, 300);
     assert.equal(arm.task, "refactor auth");
+    assert.equal(arm.hard, false);
+  });
+
+  it("arms hard mode from /deadline-hard", () => {
+    const arm = extractDeadlineArm('/deadline-hard 10m "ship it"');
+    assert.ok(arm);
+    assert.equal(arm.deadlineSec, 600);
+    assert.equal(arm.task, "ship it");
+    assert.equal(arm.hard, true);
   });
 });
 

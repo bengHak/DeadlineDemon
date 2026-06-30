@@ -1,14 +1,28 @@
-import { mkdirSync, readFileSync, unlinkSync, writeFileSync, existsSync, readdirSync } from "node:fs";
+import {
+  chmodSync,
+  existsSync,
+  mkdirSync,
+  readFileSync,
+  readdirSync,
+  renameSync,
+  unlinkSync,
+  writeFileSync,
+} from "node:fs";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
 export type SessionState = {
-  sessionId: string;
-  startedAt: number;
-  deadlineSec: number;
-  task: string;
-  armed: boolean;
+  readonly sessionId: string;
+  readonly startedAt: number;
+  readonly deadlineSec: number;
+  readonly task: string;
+  readonly armed: boolean;
+  /** When true, expired sessions deny non-wrap-up tool calls (deadline-hard). */
+  readonly hard: boolean;
 };
+
+const STATE_DIR_MODE = 0o700;
+const STATE_FILE_MODE = 0o600;
 
 export function getStateDir(override?: string): string {
   if (override) return override;
@@ -21,22 +35,49 @@ function sessionPath(stateDir: string, sessionId: string): string {
   return join(stateDir, `${safe}.json`);
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === "object" && value !== null && !Array.isArray(value);
+}
+
+function isSafeSecond(value: unknown): value is number {
+  return typeof value === "number" && Number.isSafeInteger(value) && value >= 0;
+}
+
+function parseSessionState(value: unknown): SessionState | null {
+  if (!isRecord(value)) return null;
+  const { sessionId, startedAt, deadlineSec, task, armed, hard } = value;
+  if (typeof sessionId !== "string" || sessionId.length === 0) return null;
+  if (!isSafeSecond(startedAt) || !isSafeSecond(deadlineSec) || deadlineSec === 0) return null;
+  if (typeof task !== "string") return null;
+  if (typeof armed !== "boolean") return null;
+  const hardMode = typeof hard === "boolean" ? hard : false;
+  return { sessionId, startedAt, deadlineSec, task, armed, hard: hardMode };
+}
+
+function ensureStateDir(stateDir: string): void {
+  mkdirSync(stateDir, { recursive: true, mode: STATE_DIR_MODE });
+  chmodSync(stateDir, STATE_DIR_MODE);
+}
+
 export function readSession(stateDir: string, sessionId: string): SessionState | null {
   const path = sessionPath(stateDir, sessionId);
   if (!existsSync(path)) return null;
   try {
     const raw = readFileSync(path, "utf8");
-    const parsed = JSON.parse(raw) as SessionState;
-    if (typeof parsed.sessionId !== "string") return null;
-    return parsed;
+    const parsed: unknown = JSON.parse(raw);
+    return parseSessionState(parsed);
   } catch {
     return null;
   }
 }
 
 export function writeSession(stateDir: string, state: SessionState): void {
-  mkdirSync(stateDir, { recursive: true });
-  writeFileSync(sessionPath(stateDir, state.sessionId), `${JSON.stringify(state, null, 2)}\n`, "utf8");
+  ensureStateDir(stateDir);
+  const path = sessionPath(stateDir, state.sessionId);
+  const tempPath = `${path}.${process.pid}.tmp`;
+  writeFileSync(tempPath, `${JSON.stringify(state, null, 2)}\n`, { encoding: "utf8", mode: STATE_FILE_MODE });
+  renameSync(tempPath, path);
+  chmodSync(path, STATE_FILE_MODE);
 }
 
 export function deleteSession(stateDir: string, sessionId: string): boolean {
@@ -52,6 +93,7 @@ export function armSession(
   deadlineSec: number,
   task: string,
   nowSec = Math.floor(Date.now() / 1000),
+  hard = false,
 ): SessionState {
   const state: SessionState = {
     sessionId,
@@ -59,6 +101,7 @@ export function armSession(
     deadlineSec,
     task,
     armed: true,
+    hard,
   };
   writeSession(stateDir, state);
   return state;
@@ -75,7 +118,8 @@ export function listSessions(stateDir: string): SessionState[] {
     .filter((name) => name.endsWith(".json"))
     .map((name) => {
       try {
-        return JSON.parse(readFileSync(join(stateDir, name), "utf8")) as SessionState;
+        const parsed: unknown = JSON.parse(readFileSync(join(stateDir, name), "utf8"));
+        return parseSessionState(parsed);
       } catch {
         return null;
       }

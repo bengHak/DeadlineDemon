@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
-import { armSession } from "../core/state.js";
+import { armSession, readSession } from "../core/state.js";
 import { runUserPromptSubmitHook } from "../hooks/user-prompt-submit.js";
 
 describe("user-prompt-submit hook", () => {
@@ -17,13 +17,26 @@ describe("user-prompt-submit hook", () => {
     rmSync(stateDir, { recursive: true, force: true });
   });
 
-  it("arms on /deadline command", () => {
+  it("arms on /deadline command (nudge-only)", () => {
     const output = runUserPromptSubmitHook(
       { hook_event_name: "UserPromptSubmit", session_id: "s1", prompt: "/deadline 8m login" },
       { stateDir, nowSec: 100, platform: "codex" },
     );
     assert.match(output, /Deadline armed/i);
+    assert.match(output, /Reminder-only/i);
     assert.match(output, /hookSpecificOutput/);
+    const state = readSession(stateDir, "s1");
+    assert.equal(state?.hard, false);
+  });
+
+  it("arms hard mode on /deadline-hard command", () => {
+    const output = runUserPromptSubmitHook(
+      { hook_event_name: "UserPromptSubmit", session_id: "s1h", prompt: '/deadline-hard 8m "login"' },
+      { stateDir, nowSec: 100, platform: "codex" },
+    );
+    assert.match(output, /Hard enforcement/i);
+    const state = readSession(stateDir, "s1h");
+    assert.equal(state?.hard, true);
   });
 
   it("injects countdown when armed with time left", () => {

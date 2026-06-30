@@ -1,6 +1,6 @@
 {
   "name": "deadline-demon",
   "version": "0.1.0",
-  "description": "Arm session deadlines and force AI agents to finish on time",
+  "description": "Arm session deadlines and nudge AI agents to finish on time (optional hard enforcement)",
   "author": "DeadlineDemon contributors"
 }
