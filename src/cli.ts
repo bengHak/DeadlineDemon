@@ -1,0 +1,129 @@
+#!/usr/bin/env node
+import { stdin as processStdin, stdout as processStdout } from "node:process";
+import { runPreToolUseHook } from "./hooks/pre-tool-use.js";
+import { runUserPromptSubmitHook } from "./hooks/user-prompt-submit.js";
+import {
+  deleteSession,
+  getStateDir,
+  listSessions,
+  readSession,
+  remainingSeconds,
+} from "./core/state.js";
+import { formatRemaining } from "./core/duration.js";
+import { installTargets, validateHookManifest } from "./install.js";
+
+async function readStdin(): Promise<string> {
+  const chunks: Buffer[] = [];
+  for await (const chunk of processStdin) {
+    chunks.push(Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk));
+  }
+  return Buffer.concat(chunks).toString("utf8");
+}
+
+function printStatus(sessionId?: string): void {
+  const stateDir = getStateDir();
+  if (sessionId) {
+    const state = readSession(stateDir, sessionId);
+    if (!state?.armed) {
+      processStdout.write(`No armed deadline for session ${sessionId}\n`);
+      return;
+    }
+    const remain = remainingSeconds(state);
+    processStdout.write(
+      `session=${state.sessionId} armed=true remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
+    );
+    return;
+  }
+
+  const sessions = listSessions(stateDir);
+  if (sessions.length === 0) {
+    processStdout.write("No armed deadlines\n");
+    return;
+  }
+  for (const state of sessions) {
+    const remain = remainingSeconds(state);
+    processStdout.write(
+      `session=${state.sessionId} remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
+    );
+  }
+}
+
+function printReset(sessionId?: string): void {
+  const stateDir = getStateDir();
+  if (sessionId) {
+    const removed = deleteSession(stateDir, sessionId);
+    processStdout.write(removed ? `Reset session ${sessionId}\n` : `No state for session ${sessionId}\n`);
+    return;
+  }
+
+  const sessions = listSessions(stateDir);
+  if (sessions.length === 0) {
+    processStdout.write("No sessions to reset\n");
+    return;
+  }
+  for (const state of sessions) {
+    deleteSession(stateDir, state.sessionId);
+  }
+  processStdout.write(`Reset ${sessions.length} session(s)\n`);
+}
+
+async function main(): Promise<void> {
+  const args = process.argv.slice(2);
+  const command = args[0];
+
+  if (command === "hook") {
+    const hookName = args[1];
+    const payload = await readStdin();
+    const input = payload.trim().length > 0 ? JSON.parse(payload) : {};
+
+    if (hookName === "user-prompt-submit") {
+      processStdout.write(runUserPromptSubmitHook(input));
+      return;
+    }
+    if (hookName === "pre-tool-use") {
+      const result = runPreToolUseHook(input);
+      processStdout.write(result.output);
+      process.exit(result.deny ? 2 : 0);
+      return;
+    }
+    throw new Error(`Unknown hook: ${hookName ?? "(missing)"}`);
+  }
+
+  if (command === "install") {
+    const dryRun = args.includes("--dry-run");
+    const targets = installTargets(dryRun);
+    for (const target of targets) {
+      processStdout.write(`${target.platform}: ${target.path} (${target.action})${dryRun ? " [dry-run]" : ""}\n`);
+    }
+    if (!dryRun) {
+      processStdout.write(`manifest: ${validateHookManifest()}\n`);
+    }
+    return;
+  }
+
+  if (command === "status") {
+    const sessionIdx = args.indexOf("--session-id");
+    printStatus(sessionIdx >= 0 ? args[sessionIdx + 1] : undefined);
+    return;
+  }
+
+  if (command === "reset") {
+    const sessionIdx = args.indexOf("--session-id");
+    printReset(sessionIdx >= 0 ? args[sessionIdx + 1] : undefined);
+    return;
+  }
+
+  processStdout.write(`Usage:
+  deadline-demon install [--dry-run]
+  deadline-demon status [--session-id <id>]
+  deadline-demon reset [--session-id <id>]
+  deadline-demon hook user-prompt-submit   # stdin JSON
+  deadline-demon hook pre-tool-use         # stdin JSON
+`);
+}
+
+main().catch((error: unknown) => {
+  const message = error instanceof Error ? error.message : String(error);
+  process.stderr.write(`${message}\n`);
+  process.exit(1);
+});

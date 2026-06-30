@@ -1,0 +1,27 @@
+{
+  "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${DEADLINE_DEMON_CLI}\" hook user-prompt-submit",
+            "timeout": 10
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": ".*",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node \"${DEADLINE_DEMON_CLI}\" hook pre-tool-use",
+            "timeout": 5
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "name": "deadline-demon",
+  "version": "0.1.0",
+  "description": "Cross-CLI hook tool that arms session deadlines and forces AI agents to finish on time",
+  "license": "MIT",
+  "type": "module",
+  "bin": {
+    "deadline-demon": "./dist/cli.js"
+  },
+  "files": [
+    "dist",
+    "plugin",
+    "templates"
+  ],
+  "scripts": {
+    "build": "tsc",
+    "test": "npm run build && node --test dist/tests/**/*.test.js",
+    "prepublishOnly": "npm run build"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.0",
+    "typescript": "^5.7.2"
+  }
+}
