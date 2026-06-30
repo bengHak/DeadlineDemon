@@ -4,6 +4,8 @@
 
 # DeadlineDemon
 
+[![npm version](https://img.shields.io/npm/v/deadline-demon.svg)](https://www.npmjs.com/package/deadline-demon)
+
 Cross-CLI hook tool that arms session deadlines and nudges AI agents to finish on time.
 
 Works with **Codex CLI**, **Grok Build**, and **Claude Code**.
@@ -16,17 +18,9 @@ Install hooks with **npx** (no clone or global install required):
 npx deadline-demon install
 ```
 
-Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into each harness. Re-run `install` after upgrading.
+Hooks are copied to a persistent directory (`~/.deadline-demon/`) and wired into each harness. Re-run `install` after upgrading the package.
 
 Enable the plugin in your harness (`/plugins`, `/hooks` in Codex/Grok; trust project hooks if using repo-local copies).
-
-### Before npm publish
-
-If the package is not on npm yet, install directly from GitHub:
-
-```bash
-npx github:bengHak/DeadlineDemon install
-```
 
 ## Two arm commands
 
