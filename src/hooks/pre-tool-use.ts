@@ -1,6 +1,7 @@
 import { timeUpDenyReason } from "../core/messages.js";
 import { getStateDir, readSession, remainingSeconds } from "../core/state.js";
-import { detectPlatform, detectPlatformFromInput } from "../formatters/platform.js";
+import { resolveNowSec } from "../core/clock.js";
+import { resolvePlatform } from "../formatters/platform.js";
 import { formatPreToolAllow, formatPreToolDeny } from "../formatters/output.js";
 
 const WRAP_UP_TOOLS = /^(git|run_terminal_command|Bash|Shell)$/i;
@@ -45,7 +46,7 @@ export function runPreToolUseHook(
   }
 
   const record = input as Record<string, unknown>;
-  const platform = options?.platform ?? detectPlatformFromInput(record) ?? detectPlatform();
+  const platform = resolvePlatform(record, options?.platform);
   const stateDir = options?.stateDir ?? getStateDir();
   const sessionId = sessionIdFromInput(record);
   const state = readSession(stateDir, sessionId);
@@ -54,7 +55,7 @@ export function runPreToolUseHook(
     return { output: formatPreToolAllow(platform), deny: false };
   }
 
-  const remain = remainingSeconds(state, options?.nowSec);
+  const remain = remainingSeconds(state, resolveNowSec(options?.nowSec));
   if (remain > 0) {
     return { output: formatPreToolAllow(platform), deny: false };
   }

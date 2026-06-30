@@ -11,7 +11,9 @@ export type SessionState = {
 };
 
 export function getStateDir(override?: string): string {
-  return override ?? join(homedir(), ".deadline-demon", "sessions");
+  if (override) return override;
+  if (process.env.DEADLINE_DEMON_STATE_DIR) return process.env.DEADLINE_DEMON_STATE_DIR;
+  return join(homedir(), ".deadline-demon", "sessions");
 }
 
 function sessionPath(stateDir: string, sessionId: string): string {

@@ -51,4 +51,15 @@ describe("user-prompt-submit hook", () => {
     );
     assert.equal(output, "");
   });
+
+  it("uses grok additionalContext shape", () => {
+    armSession(stateDir, "s5", 300, "task", 100);
+    const output = runUserPromptSubmitHook(
+      { hookEventName: "UserPromptSubmit", sessionId: "s5", prompt: "go" },
+      { stateDir, nowSec: 200, platform: "grok" },
+    );
+    const parsed = JSON.parse(output.trim()) as Record<string, unknown>;
+    assert.equal(typeof parsed.additionalContext, "string");
+    assert.equal(parsed.hookSpecificOutput, undefined);
+  });
 });

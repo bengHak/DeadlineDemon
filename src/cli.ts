@@ -9,8 +9,21 @@ import {
   readSession,
   remainingSeconds,
 } from "./core/state.js";
+import { resolveNowSec } from "./core/clock.js";
 import { formatRemaining } from "./core/duration.js";
 import { installTargets, validateHookManifest } from "./install.js";
+import type { Platform } from "./formatters/platform.js";
+
+function parseHookArgs(args: string[]): { hookName: string; platform?: Platform } {
+  const hookName = args[1];
+  const platformIdx = args.indexOf("--platform");
+  const platform =
+    platformIdx >= 0 ? (args[platformIdx + 1] as Platform | undefined) : undefined;
+  if (platform && platform !== "codex" && platform !== "claude" && platform !== "grok") {
+    throw new Error(`Invalid --platform: ${platform}`);
+  }
+  return { hookName, platform };
+}
 
 async function readStdin(): Promise<string> {
   const chunks: Buffer[] = [];
@@ -22,13 +35,14 @@ async function readStdin(): Promise<string> {
 
 function printStatus(sessionId?: string): void {
   const stateDir = getStateDir();
+  const nowSec = resolveNowSec();
   if (sessionId) {
     const state = readSession(stateDir, sessionId);
     if (!state?.armed) {
       processStdout.write(`No armed deadline for session ${sessionId}\n`);
       return;
     }
-    const remain = remainingSeconds(state);
+    const remain = remainingSeconds(state, nowSec);
     processStdout.write(
       `session=${state.sessionId} armed=true remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
     );
@@ -41,7 +55,7 @@ function printStatus(sessionId?: string): void {
     return;
   }
   for (const state of sessions) {
-    const remain = remainingSeconds(state);
+    const remain = remainingSeconds(state, nowSec);
     processStdout.write(
       `session=${state.sessionId} remain=${formatRemaining(remain)} task=${state.task || "(none)"}\n`,
     );
@@ -72,16 +86,17 @@ async function main(): Promise<void> {
   const command = args[0];
 
   if (command === "hook") {
-    const hookName = args[1];
+    const { hookName, platform } = parseHookArgs(args);
     const payload = await readStdin();
     const input = payload.trim().length > 0 ? JSON.parse(payload) : {};
+    const hookOptions = platform ? { platform } : undefined;
 
     if (hookName === "user-prompt-submit") {
-      processStdout.write(runUserPromptSubmitHook(input));
+      processStdout.write(runUserPromptSubmitHook(input, hookOptions));
       return;
     }
     if (hookName === "pre-tool-use") {
-      const result = runPreToolUseHook(input);
+      const result = runPreToolUseHook(input, hookOptions);
       processStdout.write(result.output);
       process.exit(result.deny ? 2 : 0);
       return;
@@ -117,8 +132,8 @@ async function main(): Promise<void> {
   deadline-demon install [--dry-run]
   deadline-demon status [--session-id <id>]
   deadline-demon reset [--session-id <id>]
-  deadline-demon hook user-prompt-submit   # stdin JSON
-  deadline-demon hook pre-tool-use         # stdin JSON
+  deadline-demon hook user-prompt-submit [--platform codex|claude|grok]
+  deadline-demon hook pre-tool-use [--platform codex|claude|grok]
 `);
 }
 

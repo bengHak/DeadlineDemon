@@ -6,7 +6,8 @@ import {
   readSession,
   remainingSeconds,
 } from "../core/state.js";
-import { detectPlatform, detectPlatformFromInput } from "../formatters/platform.js";
+import { resolveNowSec } from "../core/clock.js";
+import { resolvePlatform } from "../formatters/platform.js";
 import { formatUserPromptOutput } from "../formatters/output.js";
 
 function sessionIdFromInput(input: Record<string, unknown>): string {
@@ -33,11 +34,11 @@ export function runUserPromptSubmitHook(
   if (!input || typeof input !== "object") return "";
 
   const record = input as Record<string, unknown>;
-  const platform = options?.platform ?? detectPlatformFromInput(record) ?? detectPlatform();
+  const platform = resolvePlatform(record, options?.platform);
   const stateDir = options?.stateDir ?? getStateDir();
   const sessionId = sessionIdFromInput(record);
   const prompt = promptFromInput(record);
-  const nowSec = options?.nowSec;
+  const nowSec = resolveNowSec(options?.nowSec);
 
   const arm = extractDeadlineArm(prompt);
   if (arm) {

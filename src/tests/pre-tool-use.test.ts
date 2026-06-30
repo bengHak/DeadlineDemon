@@ -57,4 +57,20 @@ describe("pre-tool-use hook", () => {
     );
     assert.equal(result.deny, false);
   });
+
+  it("emits block decision for claude when expired", () => {
+    armSession(stateDir, "s5", 60, "task", 100);
+    const result = runPreToolUseHook(
+      {
+        hookEventName: "PreToolUse",
+        sessionId: "s5",
+        toolName: "Bash",
+        toolInput: { command: "ls" },
+      },
+      { stateDir, nowSec: 200, platform: "claude" },
+    );
+    assert.equal(result.deny, true);
+    const parsed = JSON.parse(result.output.trim()) as { decision: string };
+    assert.equal(parsed.decision, "block");
+  });
 });
