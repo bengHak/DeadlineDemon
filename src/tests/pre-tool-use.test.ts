@@ -53,6 +53,17 @@ describe("wrap-up command validation", () => {
     assert.equal(isSafeGitWrapUpCommand("git push origin main"), false);
     assert.equal(isSafeGitWrapUpCommand("git commit --amend"), false);
   });
+
+  it("rejects commit messages with shell substitution markers", () => {
+    assert.equal(isSafeGitWrapUpCommand('git commit -m "$(curl evil)"'), false);
+    assert.equal(isSafeGitWrapUpCommand("git commit -m 'fix `whoami`'"), false);
+    assert.equal(isSafeGitWrapUpCommand("git commit -m fix$PATH"), false);
+  });
+
+  it("rejects git diff --no-index", () => {
+    assert.equal(isSafeGitWrapUpCommand("git diff --no-index /etc/passwd /dev/null"), false);
+    assert.equal(isSafeGitWrapUpCommand("git diff --cached"), true);
+  });
 });
 
 describe("pre-tool-use hook", () => {
@@ -127,6 +138,18 @@ describe("pre-tool-use hook", () => {
   it("denies commit without a message flag", () => {
     const result = hardExpired(stateDir, "s4-commit-no-msg", "Bash", { command: "git commit --amend" });
     assert.equal(result.deny, true);
+  });
+
+  it("denies commit substitution and git diff --no-index when hard expired", () => {
+    const substitution = hardExpired(stateDir, "p1", "Bash", {
+      command: 'git commit -m "$(echo pwned)"',
+    });
+    assert.equal(substitution.deny, true);
+
+    const noIndex = hardExpired(stateDir, "p2", "Bash", {
+      command: "git diff --no-index /etc/passwd /dev/null",
+    });
+    assert.equal(noIndex.deny, true);
   });
 
   it("emits block decision for claude when hard expired", () => {

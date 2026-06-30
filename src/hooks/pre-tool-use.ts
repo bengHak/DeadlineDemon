@@ -5,6 +5,8 @@ import { resolvePlatform } from "../formatters/platform.js";
 import { formatPreToolAllow, formatPreToolDeny } from "../formatters/output.js";
 
 const WRAP_UP_SUBCOMMANDS = new Set(["status", "diff", "add", "commit"]);
+const COMMIT_MESSAGE_FLAG = /-(?:m|--message)/i;
+const DIFF_NO_INDEX = /(?:^|\s)--no-index(?:=|\s|$)/i;
 
 function isWrapUpToolName(toolName: string): boolean {
   const normalized = toolName.toLowerCase();
@@ -58,6 +60,28 @@ export function hasShellInjectionOutsideQuotes(command: string): boolean {
   return inSingle || inDouble;
 }
 
+/** Block $, backtick, and $( inside commit -m / --message values. */
+export function hasCommitSubstitutionMarkers(message: string): boolean {
+  return message.includes("$") || message.includes("`") || message.includes("$(");
+}
+
+/** Extract -m / --message argument values from git commit argv tail. */
+export function extractCommitMessageValues(commitArgs: string): string[] {
+  const values: string[] = [];
+  const pattern = /-(?:m|--message)(?:\s*=?\s*("[^"]*"|'[^']*'|[^\s-]+))?/gi;
+  let match: RegExpExecArray | null;
+  while ((match = pattern.exec(commitArgs)) !== null) {
+    const raw = match[1];
+    if (!raw) continue;
+    if ((raw.startsWith('"') && raw.endsWith('"')) || (raw.startsWith("'") && raw.endsWith("'"))) {
+      values.push(raw.slice(1, -1));
+    } else {
+      values.push(raw);
+    }
+  }
+  return values;
+}
+
 function normalizeGitCommand(toolName: string, command: string): string {
   const trimmed = command.trim().replace(/\s+/g, " ");
   if (trimmed.length === 0) return "";
@@ -79,8 +103,17 @@ export function isSafeGitWrapUpCommand(command: string): boolean {
   const subcommand = match[1].toLowerCase();
   if (!WRAP_UP_SUBCOMMANDS.has(subcommand)) return false;
 
+  const args = match[2] ?? "";
+
+  if (subcommand === "diff" && DIFF_NO_INDEX.test(args)) {
+    return false;
+  }
+
   if (subcommand === "commit") {
-    return /\s-(?:m|--message)(?:\s|=)/i.test(normalized);
+    if (!COMMIT_MESSAGE_FLAG.test(args)) return false;
+    const messages = extractCommitMessageValues(args);
+    if (messages.length === 0) return false;
+    return messages.every((message) => !hasCommitSubstitutionMarkers(message));
   }
 
   return true;
