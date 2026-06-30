@@ -37,6 +37,14 @@ describe("session state", () => {
     assert.equal(state?.hard, true);
   });
 
+  it("keeps unsafe session ids isolated instead of collapsing them to the same file", () => {
+    armSession(stateDir, "a/b", 60, "first", 1_000, true);
+    armSession(stateDir, "a?b", 120, "second", 1_000, false);
+
+    assert.equal(readSession(stateDir, "a/b")?.task, "first");
+    assert.equal(readSession(stateDir, "a?b")?.task, "second");
+  });
+
   it("writes private state files", () => {
     armSession(stateDir, "sess-private", 480, "login page", 1_000);
     assert.equal(statSync(stateDir).mode & 0o777, 0o700);

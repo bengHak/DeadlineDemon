@@ -21,7 +21,7 @@
     "hooks"
   ],
   "bin": {
-    "deadline-demon": "./dist/cli.js"
+    "deadline-demon": "dist/cli.js"
   },
   "files": [
     "dist/cli.d.ts",

@@ -4,6 +4,17 @@ export type DeadlineArm = {
   hard: boolean;
 };
 
+export const MAX_DEADLINE_MINUTES = 24 * 60;
+export const MAX_TASK_CHARS = 200;
+
+const TASK_TRUNCATION_MARKER = "...";
+
+function normalizeTask(input: string): string {
+  const collapsed = input.replace(/\s+/g, " ").trim();
+  if (collapsed.length <= MAX_TASK_CHARS) return collapsed;
+  return `${collapsed.slice(0, MAX_TASK_CHARS - TASK_TRUNCATION_MARKER.length)}${TASK_TRUNCATION_MARKER}`;
+}
+
 /** Parse a bare minute count (digits only). */
 export function parseMinutes(input: string): number | null {
   const trimmed = input.trim();
@@ -11,12 +22,15 @@ export function parseMinutes(input: string): number | null {
   if (!match) return null;
   const minutes = Number(match[1]);
   if (!Number.isSafeInteger(minutes) || minutes <= 0) return null;
+  if (minutes > MAX_DEADLINE_MINUTES) return null;
   return minutes;
 }
 
 export function parseDurationSeconds(input: string): number | null {
   const minutes = parseMinutes(input);
-  return minutes === null ? null : minutes * 60;
+  if (minutes === null) return null;
+  const seconds = minutes * 60;
+  return Number.isSafeInteger(seconds) ? seconds : null;
 }
 
 export function extractDeadlineArm(input: string): DeadlineArm | null {
@@ -31,8 +45,11 @@ export function extractDeadlineArm(input: string): DeadlineArm | null {
 
   const quoted = match[3]?.trim();
   const rest = match[4]?.trim();
-  const task = quoted ?? rest ?? "";
-  return { deadlineSec: minutes * 60, task, hard };
+  const deadlineSec = parseDurationSeconds(match[2]);
+  if (deadlineSec === null) return null;
+
+  const task = normalizeTask(quoted ?? rest ?? "");
+  return { deadlineSec, task, hard };
 }
 
 export function formatRemaining(seconds: number): string {

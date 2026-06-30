@@ -33,6 +33,10 @@ function toolInputFromInput(input: Record<string, unknown>): Record<string, unkn
   return {};
 }
 
+function hasLineBreak(command: string): boolean {
+  return command.includes("\r") || command.includes("\n");
+}
+
 /** Detect shell chaining/substitution outside balanced quotes. */
 export function hasShellInjectionOutsideQuotes(command: string): boolean {
   let inSingle = false;
@@ -84,7 +88,7 @@ export function extractCommitMessageValues(commitArgs: string): string[] {
 }
 
 function normalizeGitCommand(toolName: string, command: string): string {
-  const trimmed = command.trim().replace(/\s+/g, " ");
+  const trimmed = command.trim();
   if (trimmed.length === 0) return "";
   if (toolName.toLowerCase() === "git" && !/^git\s/i.test(trimmed)) {
     return `git ${trimmed}`;
@@ -94,8 +98,11 @@ function normalizeGitCommand(toolName: string, command: string): string {
 
 /** Allow git status/diff/add/commit wrap-up commands with realistic paths and flags. */
 export function isSafeGitWrapUpCommand(command: string): boolean {
-  const normalized = command.trim().replace(/\s+/g, " ");
-  if (normalized.length === 0) return false;
+  const trimmed = command.trim();
+  if (trimmed.length === 0) return false;
+  if (hasLineBreak(trimmed)) return false;
+  if (hasShellInjectionOutsideQuotes(trimmed)) return false;
+  const normalized = trimmed.replace(/[ \t\f\v]+/g, " ");
   if (hasShellInjectionOutsideQuotes(normalized)) return false;
 
   const match = normalized.match(/^git\s+(\S+)(?:\s+([\s\S]*))?$/i);

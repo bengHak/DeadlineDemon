@@ -1,6 +1,13 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
-import { extractDeadlineArm, formatRemaining, parseDurationSeconds, parseMinutes } from "../core/duration.js";
+import {
+  MAX_DEADLINE_MINUTES,
+  MAX_TASK_CHARS,
+  extractDeadlineArm,
+  formatRemaining,
+  parseDurationSeconds,
+  parseMinutes,
+} from "../core/duration.js";
 
 describe("parseMinutes", () => {
   it("parses bare minute counts", () => {
@@ -14,12 +21,27 @@ describe("parseMinutes", () => {
     assert.equal(parseMinutes("0"), null);
     assert.equal(parseMinutes("not-a-number"), null);
   });
+
+  it("rejects minute counts that cannot become safe seconds", () => {
+    const tooLarge = String(Math.floor(Number.MAX_SAFE_INTEGER / 60) + 1);
+    assert.equal(parseMinutes(tooLarge), null);
+  });
+
+  it("enforces a one-day deadline limit", () => {
+    assert.equal(parseMinutes(String(MAX_DEADLINE_MINUTES)), MAX_DEADLINE_MINUTES);
+    assert.equal(parseMinutes(String(MAX_DEADLINE_MINUTES + 1)), null);
+  });
 });
 
 describe("parseDurationSeconds", () => {
   it("converts bare minutes to seconds", () => {
     assert.equal(parseDurationSeconds("8"), 480);
     assert.equal(parseDurationSeconds("5"), 300);
+  });
+
+  it("rejects durations that would overflow safe second values", () => {
+    const tooLarge = String(Math.floor(Number.MAX_SAFE_INTEGER / 60) + 1);
+    assert.equal(parseDurationSeconds(tooLarge), null);
   });
 });
 
@@ -51,6 +73,18 @@ describe("extractDeadlineArm", () => {
   it("rejects legacy unit suffixes", () => {
     assert.equal(extractDeadlineArm('/deadline 8m "login"'), null);
     assert.equal(extractDeadlineArm("/deadline 5분 task"), null);
+  });
+
+  it("rejects hard deadlines whose seconds would be unsafe", () => {
+    const tooLarge = String(Math.floor(Number.MAX_SAFE_INTEGER / 60) + 1);
+    assert.equal(extractDeadlineArm(`/deadline-hard ${tooLarge} task`), null);
+  });
+
+  it("caps task text so every hook response stays bounded", () => {
+    const arm = extractDeadlineArm(`/deadline 5 ${"x".repeat(1200)}`);
+    assert.ok(arm);
+    assert.equal(arm.task.length, MAX_TASK_CHARS);
+    assert.match(arm.task, /\.\.\.$/);
   });
 });
 

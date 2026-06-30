@@ -8,6 +8,7 @@ import {
   unlinkSync,
   writeFileSync,
 } from "node:fs";
+import { createHash } from "node:crypto";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
@@ -23,6 +24,7 @@ export type SessionState = {
 
 const STATE_DIR_MODE = 0o700;
 const STATE_FILE_MODE = 0o600;
+const SAFE_SESSION_ID = /^[a-zA-Z0-9._-]{1,128}$/;
 
 export function getStateDir(override?: string): string {
   if (override) return override;
@@ -31,8 +33,9 @@ export function getStateDir(override?: string): string {
 }
 
 function sessionPath(stateDir: string, sessionId: string): string {
-  const safe = sessionId.replace(/[^a-zA-Z0-9._-]/g, "_");
-  return join(stateDir, `${safe}.json`);
+  if (SAFE_SESSION_ID.test(sessionId)) return join(stateDir, `${sessionId}.json`);
+  const digest = createHash("sha256").update(sessionId).digest("hex");
+  return join(stateDir, `sha256-${digest}.json`);
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -65,8 +68,10 @@ export function readSession(stateDir: string, sessionId: string): SessionState |
   try {
     const raw = readFileSync(path, "utf8");
     const parsed: unknown = JSON.parse(raw);
-    return parseSessionState(parsed);
-  } catch {
+    const state = parseSessionState(parsed);
+    return state?.sessionId === sessionId ? state : null;
+  } catch (error) {
+    if (!(error instanceof Error)) throw error;
     return null;
   }
 }
@@ -120,7 +125,8 @@ export function listSessions(stateDir: string): SessionState[] {
       try {
         const parsed: unknown = JSON.parse(readFileSync(join(stateDir, name), "utf8"));
         return parseSessionState(parsed);
-      } catch {
+      } catch (error) {
+        if (!(error instanceof Error)) throw error;
         return null;
       }
     })

@@ -69,6 +69,11 @@ describe("wrap-up command validation", () => {
     assert.equal(isSafeGitWrapUpCommand("git status && echo bypass"), false);
   });
 
+  it("rejects newline command separators before whitespace normalization", () => {
+    assert.equal(isSafeGitWrapUpCommand("git status\necho bypass"), false);
+    assert.equal(isSafeGitWrapUpCommand("git commit -m done\necho bypass"), false);
+  });
+
   it("rejects non-wrap-up git subcommands", () => {
     assert.equal(isSafeGitWrapUpCommand("git push origin main"), false);
     assert.equal(isSafeGitWrapUpCommand("git commit --amend"), false);
@@ -154,6 +159,11 @@ describe("pre-tool-use hook", () => {
 
   it("denies chained shell commands even when they start with safe git", () => {
     const result = hardExpired(stateDir, "s4-chain", "Bash", { command: "git status && echo bypass" });
+    assert.equal(result.deny, true);
+  });
+
+  it("denies newline-separated shell commands even when they start with safe git", () => {
+    const result = hardExpired(stateDir, "s4-newline", "Bash", { command: "git status\necho bypass" });
     assert.equal(result.deny, true);
   });
 

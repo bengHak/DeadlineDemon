@@ -67,16 +67,17 @@ export function installTargets(dryRun = false): InstallTarget[] {
     },
   ];
 
-  return targets.map((target) => {
-    if (!dryRun) applyInstallTarget(target, root);
-    return target;
-  });
+  if (dryRun) return targets;
+
+  const cliPath = syncPersistentInstall(root).replace(/\\/g, "/");
+  for (const target of targets) {
+    applyInstallTarget(target, cliPath);
+  }
+  return targets;
 }
 
-function applyInstallTarget(target: InstallTarget, root: string): void {
+function applyInstallTarget(target: InstallTarget, cliPath: string): void {
   const persistentRoot = persistentInstallDir();
-  syncPersistentInstall(root);
-  const cliPath = persistentCliPath().replace(/\\/g, "/");
 
   if (target.action === "copy-plugin") {
     mkdirSync(dirname(target.path), { recursive: true });

@@ -15,7 +15,7 @@ Install once: `npx deadline-demon install`
 /deadline 5 refactor auth
 ```
 
-Minutes only — no unit suffix (`8`, not `8m`).
+Minutes only, 1 to 1440 — no unit suffix (`8`, not `8m`).
 
 Each user turn receives remaining time and urgency text. Tool calls are not blocked.
 
