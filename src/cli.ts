@@ -114,7 +114,9 @@ async function main(): Promise<void> {
   if (command === "install") {
     const dryRun = args.includes("--dry-run");
     const targets = installTargets(dryRun);
-    processStdout.write("install: UserPromptSubmit + PreToolUse (use /deadline or /deadline-hard to arm)\n");
+    processStdout.write(
+      "install: UserPromptSubmit + PreToolUse (use deadline or deadline-hard in Codex; slash form where supported)\n",
+    );
     for (const target of targets) {
       processStdout.write(`${target.platform}: ${target.path} (${target.action})${dryRun ? " [dry-run]" : ""}\n`);
     }

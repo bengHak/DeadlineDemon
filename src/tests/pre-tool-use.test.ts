@@ -109,6 +109,7 @@ describe("pre-tool-use hook", () => {
       { stateDir, platform: "codex" },
     );
     assert.equal(result.deny, false);
+    assert.equal(result.output, "");
   });
 
   it("allows when armed with time left", () => {
@@ -132,7 +133,9 @@ describe("pre-tool-use hook", () => {
   it("denies when hard armed and expired", () => {
     const result = hardExpired(stateDir, "s3", "Bash", { command: "ls" });
     assert.equal(result.deny, true);
-    assert.match(result.output, /deny/i);
+    const parsed = JSON.parse(result.output.trim()) as { decision: string; reason: string };
+    assert.equal(parsed.decision, "block");
+    assert.ok(parsed.reason.length > 0);
   });
 
   it("allows git commit when hard expired", () => {
@@ -187,6 +190,33 @@ describe("pre-tool-use hook", () => {
       command: "git diff --no-index /etc/passwd /dev/null",
     });
     assert.equal(noIndex.deny, true);
+  });
+
+  it("emits allow JSON for grok when unarmed", () => {
+    const result = runPreToolUseHook(
+      { hookEventName: "pre_tool_use", sessionId: "grok-allow", toolName: "Shell", toolInput: { command: "ls" } },
+      { stateDir, platform: "grok" },
+    );
+    assert.equal(result.deny, false);
+    const parsed = JSON.parse(result.output.trim()) as { decision: string };
+    assert.equal(parsed.decision, "allow");
+  });
+
+  it("emits deny JSON for grok when hard expired", () => {
+    armSession(stateDir, "grok-deny", 60, "task", 100, true);
+    const result = runPreToolUseHook(
+      {
+        hookEventName: "pre_tool_use",
+        sessionId: "grok-deny",
+        toolName: "Shell",
+        toolInput: { command: "ls" },
+      },
+      { stateDir, nowSec: 200, platform: "grok" },
+    );
+    assert.equal(result.deny, true);
+    const parsed = JSON.parse(result.output.trim()) as { decision: string; reason: string };
+    assert.equal(parsed.decision, "deny");
+    assert.ok(parsed.reason.length > 0);
   });
 
   it("emits block decision for claude when hard expired", () => {

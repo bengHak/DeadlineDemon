@@ -62,11 +62,17 @@ describe("extractDeadlineArm", () => {
     assert.equal(arm.hard, false);
   });
 
-  it("arms hard mode from /deadline-hard", () => {
-    const arm = extractDeadlineArm('/deadline-hard 10 "ship it"');
+  it("arms hard mode from Codex no-slash deadline-hard", () => {
+    const arm = extractDeadlineArm('deadline-hard 10 "ship it"');
     assert.ok(arm);
     assert.equal(arm.deadlineSec, 600);
     assert.equal(arm.task, "ship it");
+    assert.equal(arm.hard, true);
+  });
+
+  it("keeps slash-shaped deadline-hard compatible where supported", () => {
+    const arm = extractDeadlineArm('/deadline-hard 10 "ship it"');
+    assert.ok(arm);
     assert.equal(arm.hard, true);
   });
 

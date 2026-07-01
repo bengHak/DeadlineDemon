@@ -15,15 +15,15 @@
   "interface": {
     "displayName": "DeadlineDemon",
     "shortDescription": "Session deadline nudges for Codex",
-    "longDescription": "Arm a per-session deadline with /deadline, get remaining-time context each turn, and optionally block non-wrap-up tool calls after time runs out with /deadline-hard.",
+    "longDescription": "Arm a per-session deadline with deadline or deadline-hard in Codex, get remaining-time context each turn, and optionally block non-wrap-up tool calls after time runs out. Slash-shaped commands remain available in clients that pass them through.",
     "developerName": "DeadlineDemon contributors",
     "category": "Productivity",
     "capabilities": ["Instructions", "Lifecycle hooks"],
     "websiteURL": "https://github.com/bengHak/DeadlineDemon",
     "defaultPrompt": [
       "Arm a deadline for this task.",
-      "Use /deadline 8 \"finish this change\".",
-      "Use /deadline-hard 10 \"ship the fix\"."
+      "Use deadline 8 \"finish this change\" in Codex.",
+      "Use deadline-hard 10 \"ship the fix\" in Codex."
     ],
     "brandColor": "#8B1E3F"
   }

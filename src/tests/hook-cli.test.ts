@@ -58,13 +58,13 @@ describe("hook CLI piping", () => {
     assert.match(stdout, /Reminder-only/i);
   });
 
-  it("arms hard via /deadline-hard through CLI", () => {
+  it("arms hard via Codex no-slash deadline-hard through CLI", () => {
     const { stdout } = runHook(
       "user-prompt-submit",
       {
         hook_event_name: "UserPromptSubmit",
         session_id: "cli-hard-arm",
-        prompt: '/deadline-hard 8 "login"',
+        prompt: 'deadline-hard 8 "login"',
       },
       { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir },
     );
@@ -94,7 +94,7 @@ describe("hook CLI piping", () => {
     assert.equal(parsed.hookSpecificOutput, undefined);
   });
 
-  it("allows pre-tool-use when soft armed and expired", () => {
+  it("allows pre-tool-use when soft armed and expired with empty codex stdout", () => {
     armSession(stateDir, "cli-soft", 60, "task", 100, false);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -104,14 +104,18 @@ describe("hook CLI piping", () => {
         toolName: "Bash",
         toolInput: { command: "ls" },
       },
-      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+      {
+        ...process.env,
+        CODEX_HOME: join(tmpdir(), "deadline-demon-codex-home"),
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+      },
     );
-    const parsed = JSON.parse(stdout.trim()) as { decision: string };
-    assert.equal(parsed.decision, "allow");
+    assert.equal(stdout, "");
     assert.equal(status, 0);
   });
 
-  it("denies pre-tool-use on hard expired session with exit code 2", () => {
+  it("denies pre-tool-use on hard expired session with codex block JSON and exit code 2", () => {
     armSession(stateDir, "cli-deny", 60, "task", 100, true);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -121,14 +125,20 @@ describe("hook CLI piping", () => {
         toolName: "Bash",
         toolInput: { command: "ls" },
       },
-      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+      {
+        ...process.env,
+        CODEX_HOME: join(tmpdir(), "deadline-demon-codex-home"),
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+      },
     );
-    const parsed = JSON.parse(stdout.trim()) as { decision: string };
-    assert.equal(parsed.decision, "deny");
+    const parsed = JSON.parse(stdout.trim()) as { decision: string; reason: string };
+    assert.equal(parsed.decision, "block");
+    assert.ok(parsed.reason.length > 0);
     assert.equal(status, 2);
   });
 
-  it("denies commit substitution via CLI when hard expired (-m)", () => {
+  it("denies commit substitution via CLI when hard expired (-m) with codex block", () => {
     armSession(stateDir, "cli-p1", 60, "task", 100, true);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -138,14 +148,19 @@ describe("hook CLI piping", () => {
         toolName: "Bash",
         toolInput: { command: 'git commit -m "$(echo pwned)"' },
       },
-      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+      {
+        ...process.env,
+        CODEX_HOME: join(tmpdir(), "deadline-demon-codex-home"),
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+      },
     );
     const parsed = JSON.parse(stdout.trim()) as { decision: string };
-    assert.equal(parsed.decision, "deny");
+    assert.equal(parsed.decision, "block");
     assert.equal(status, 2);
   });
 
-  it("denies commit substitution via CLI when hard expired (--message)", () => {
+  it("denies commit substitution via CLI when hard expired (--message) with codex block", () => {
     armSession(stateDir, "cli-p1-msg", 60, "task", 100, true);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -155,14 +170,19 @@ describe("hook CLI piping", () => {
         toolName: "Bash",
         toolInput: { command: 'git commit --message "pwned $(evil)"' },
       },
-      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+      {
+        ...process.env,
+        CODEX_HOME: join(tmpdir(), "deadline-demon-codex-home"),
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+      },
     );
     const parsed = JSON.parse(stdout.trim()) as { decision: string };
-    assert.equal(parsed.decision, "deny");
+    assert.equal(parsed.decision, "block");
     assert.equal(status, 2);
   });
 
-  it("allows realistic git wrap-up via CLI when hard expired", () => {
+  it("allows realistic git wrap-up via CLI when hard expired with empty codex stdout", () => {
     armSession(stateDir, "cli-wrap", 60, "task", 100, true);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -172,14 +192,18 @@ describe("hook CLI piping", () => {
         toolName: "Bash",
         toolInput: { command: 'git commit -m "fix; ok" --no-verify' },
       },
-      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+      {
+        ...process.env,
+        CODEX_HOME: join(tmpdir(), "deadline-demon-codex-home"),
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+      },
     );
-    const parsed = JSON.parse(stdout.trim()) as { decision: string };
-    assert.equal(parsed.decision, "allow");
+    assert.equal(stdout, "");
     assert.equal(status, 0);
   });
 
-  it("allows pre-tool-use when time remains with exit code 0", () => {
+  it("allows pre-tool-use when time remains with empty codex stdout and exit code 0", () => {
     armSession(stateDir, "cli-allow", 600, "task", 100);
     const { stdout, status } = runHook(
       "pre-tool-use",
@@ -189,11 +213,60 @@ describe("hook CLI piping", () => {
         toolName: "Bash",
         toolInput: { command: "ls" },
       },
-      { ...process.env, DEADLINE_DEMON_STATE_DIR: stateDir, DEADLINE_DEMON_NOW_SEC: "200" },
+      {
+        ...process.env,
+        CODEX_HOME: join(tmpdir(), "deadline-demon-codex-home"),
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+      },
+    );
+    assert.equal(stdout, "");
+    assert.equal(status, 0);
+  });
+
+  it("emits grok allow JSON via pre-tool-use CLI", () => {
+    const { stdout, status } = runHook(
+      "pre-tool-use",
+      {
+        hookEventName: "pre_tool_use",
+        sessionId: "cli-grok-allow",
+        toolName: "Shell",
+        toolInput: { command: "ls" },
+      },
+      {
+        ...process.env,
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        GROK_HOOK_EVENT: "pre_tool_use",
+      },
+      ["--platform", "grok"],
     );
     const parsed = JSON.parse(stdout.trim()) as { decision: string };
     assert.equal(parsed.decision, "allow");
     assert.equal(status, 0);
+  });
+
+  it("emits grok deny JSON via pre-tool-use CLI when hard expired", () => {
+    armSession(stateDir, "cli-grok-deny", 60, "task", 100, true);
+    const { stdout, status } = runHook(
+      "pre-tool-use",
+      {
+        hookEventName: "pre_tool_use",
+        sessionId: "cli-grok-deny",
+        toolName: "Shell",
+        toolInput: { command: "ls" },
+      },
+      {
+        ...process.env,
+        DEADLINE_DEMON_STATE_DIR: stateDir,
+        DEADLINE_DEMON_NOW_SEC: "200",
+        GROK_HOOK_EVENT: "pre_tool_use",
+      },
+      ["--platform", "grok"],
+    );
+    const parsed = JSON.parse(stdout.trim()) as { decision: string; reason: string };
+    assert.equal(parsed.decision, "deny");
+    assert.ok(parsed.reason.length > 0);
+    assert.equal(status, 2);
   });
 
   it("rejects oversized hook payloads before parsing", () => {
@@ -212,7 +285,7 @@ describe("install CLI", () => {
     const { stdout, status } = runCli(["install", "--dry-run"], process.env);
     assert.equal(status, 0);
     assert.match(stdout, /UserPromptSubmit \+ PreToolUse/i);
-    assert.match(stdout, /\/deadline or \/deadline-hard/i);
+    assert.match(stdout, /deadline or deadline-hard in Codex/i);
   });
 });
 

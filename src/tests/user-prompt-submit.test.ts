@@ -29,9 +29,9 @@ describe("user-prompt-submit hook", () => {
     assert.equal(state?.hard, false);
   });
 
-  it("arms hard mode on /deadline-hard command", () => {
+  it("arms hard mode on Codex no-slash deadline-hard command", () => {
     const output = runUserPromptSubmitHook(
-      { hook_event_name: "UserPromptSubmit", session_id: "s1h", prompt: '/deadline-hard 8 "login"' },
+      { hook_event_name: "UserPromptSubmit", session_id: "s1h", prompt: 'deadline-hard 8 "login"' },
       { stateDir, nowSec: 100, platform: "codex" },
     );
     assert.match(output, /Hard enforcement/i);

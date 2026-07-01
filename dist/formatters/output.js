@@ -16,13 +16,10 @@ export function formatPreToolDeny(platform, reason) {
     if (platform === "grok") {
         return `${JSON.stringify({ decision: "deny", reason })}\n`;
     }
-    if (platform === "claude") {
-        return `${JSON.stringify({ decision: "block", reason })}\n`;
-    }
-    return `${JSON.stringify({ decision: "deny", reason })}\n`;
+    return `${JSON.stringify({ decision: "block", reason })}\n`;
 }
 export function formatPreToolAllow(platform) {
-    if (platform === "grok" || platform === "codex") {
+    if (platform === "grok") {
         return `${JSON.stringify({ decision: "allow" })}\n`;
     }
     return "";
