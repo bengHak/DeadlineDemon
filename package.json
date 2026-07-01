@@ -1,6 +1,6 @@
 {
   "name": "deadline-demon",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Cross-CLI hook tool that arms session deadlines and nudges AI agents to finish on time (optional hard enforcement)",
   "license": "MIT",
   "type": "module",

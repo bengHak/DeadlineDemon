@@ -1,17 +1,25 @@
 {
   "name": "deadline-demon",
-  "version": "0.1.2",
+  "version": "0.1.3",
   "description": "Arm session deadlines and nudge AI agents to finish on time (optional hard enforcement)",
-  "author": "DeadlineDemon contributors",
+  "author": {
+    "name": "DeadlineDemon contributors",
+    "url": "https://github.com/bengHak/DeadlineDemon"
+  },
+  "homepage": "https://github.com/bengHak/DeadlineDemon",
+  "repository": "https://github.com/bengHak/DeadlineDemon",
+  "license": "MIT",
+  "keywords": ["grok", "codex", "claude", "deadline", "hooks", "productivity"],
   "skills": "./skills/",
   "hooks": "./hooks/hooks.json",
   "interface": {
     "displayName": "DeadlineDemon",
-    "shortDescription": "Session deadline nudges for Codex",
-    "longDescription": "Use deadline or deadline-hard in Codex to arm per-session deadline nudges, with optional hard enforcement after time runs out.",
+    "shortDescription": "Session deadline nudges for AI agents",
+    "longDescription": "Arm a per-session deadline with /deadline or /deadline-hard, get remaining-time context each turn, and optionally block non-wrap-up tool calls after time runs out.",
     "defaultPrompt": [
-      "Use deadline 8 \"finish this change\" in Codex.",
-      "Use deadline-hard 10 \"ship the fix\" in Codex."
+      "Arm a deadline for this task.",
+      "/deadline 8 \"finish this change\"",
+      "/deadline-hard 10 \"ship the fix\""
     ]
   }
 }

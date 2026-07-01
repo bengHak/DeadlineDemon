@@ -1,8 +1,11 @@
 import { describe, it } from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
 import {
   hookManifestHasPreToolUse,
   installTargets,
+  packageRoot,
   persistentCliPath,
   persistentInstallDir,
   uninstallTargets,
@@ -28,6 +31,15 @@ describe("install", () => {
   it("uses a persistent home install path for npx-safe hooks", () => {
     assert.match(persistentInstallDir(), /\.deadline-demon$/);
     assert.match(persistentCliPath(), /\/\.deadline-demon\/dist\/cli\.js$/);
+  });
+
+  it("ships a Grok-valid plugin.json author object", () => {
+    const manifest = JSON.parse(
+      readFileSync(join(packageRoot(), "plugin", "plugin.json"), "utf8"),
+    ) as { author?: { name?: string; url?: string } };
+    assert.equal(typeof manifest.author, "object");
+    assert.equal(typeof manifest.author?.name, "string");
+    assert.ok((manifest.author?.name?.length ?? 0) > 0);
   });
 });
 
